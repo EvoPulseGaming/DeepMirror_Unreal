@@ -8,7 +8,16 @@ public class DeepMirrorPlugin : ModuleRules
 	public DeepMirrorPlugin(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-		
+
+		//for dlib
+		//for c4458 c4459
+		ShadowVariableWarningLevel = WarningLevel.Off;
+		//for c4668  err
+		bEnableUndefinedIdentifierWarnings = false;
+		bEnableExceptions = true;
+
+
+
 		PublicIncludePaths.AddRange(
 			new string[] {
 				// ... add public include paths required here ...
@@ -35,6 +44,7 @@ public class DeepMirrorPlugin : ModuleRules
 				"RenderCore",
 				"OpenCV",
 				"OpenCVHelper",
+				"Dlib",
 			}
 			);
 			
@@ -47,7 +57,7 @@ public class DeepMirrorPlugin : ModuleRules
 				"Slate",
 				"SlateCore",
 				"OpenCV",
-				"OpenCVHelper",
+				"OpenCVHelper"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
@@ -57,6 +67,7 @@ public class DeepMirrorPlugin : ModuleRules
 			{
 				"OpenCV",
 				"OpenCVHelper",
+				"Dlib",
 			});
 
 		DynamicallyLoadedModuleNames.AddRange(

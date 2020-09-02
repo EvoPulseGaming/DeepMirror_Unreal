@@ -1,6 +1,6 @@
 // (c) 2019 Technical University of Munich, Jakob Weiss <jakob.weiss@tum.de>, Tomas
 // Bartipan<tomas.bartipan@tum.de>
-
+#pragma once
 #include "SceneCaptureRecorder.h"
 
 #include "Engine/Texture2D.h"

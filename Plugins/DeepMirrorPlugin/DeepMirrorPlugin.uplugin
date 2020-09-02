@@ -25,6 +25,10 @@
     {
       "Name": "OpenCVLensDistortion",
       "Enabled": true
+    },
+    {
+      "Name": "Dlib",
+      "Enabled": true
     }
   ]
 }

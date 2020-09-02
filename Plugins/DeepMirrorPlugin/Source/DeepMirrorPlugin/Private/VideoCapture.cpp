@@ -1,6 +1,6 @@
 // (c) 2019 Technical University of Munich
 // Jakob Weiss <jakob.weiss@tum.de>
-
+#pragma once
 #include "VideoCapture.h"
 
 #include "OpenCV_Common.h"
@@ -8,7 +8,6 @@
 #include "Runtime/Core/Public/HAL/Runnable.h"
 #include "Runtime/Core/Public/HAL/RunnableThread.h"
 
-#include "OpenCV_Common.h"
 
 using namespace cv;
 using namespace std;

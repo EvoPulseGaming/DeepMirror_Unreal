@@ -3,7 +3,7 @@
 #pragma once
 
 #include "Modules/ModuleManager.h"
-
+#include "OpenCV_Common.h"
 class FDeepMirrorPluginModule : public IModuleInterface
 {
 public:
@@ -14,5 +14,3 @@ public:
 };
 
 
-// Declare our own log category
-DECLARE_LOG_CATEGORY_EXTERN(DeepMirrorPlugin, Log, All);

@@ -1,6 +1,6 @@
 // (c) 2019 Technical University of Munich
 // Jakob Weiss <jakob.weiss@tum.de>
-
+#pragma once
 #include "OpenCV_ImageProc.h"
 #include "OpenCV_Common.h"
 

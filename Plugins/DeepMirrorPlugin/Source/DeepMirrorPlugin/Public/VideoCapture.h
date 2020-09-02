@@ -91,7 +91,8 @@ public:
   void UpdateFrame();
 
   // TODO: refactor into a BP-callable
-  void UpdateTexture();
+  UFUNCTION()
+	  void UpdateTexture();
 
   // If the stream has succesfully opened yet
   UPROPERTY(BlueprintReadOnly, Category = "OpenCV|VideoCapture")

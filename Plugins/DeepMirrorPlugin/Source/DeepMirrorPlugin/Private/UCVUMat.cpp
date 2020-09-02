@@ -1,6 +1,7 @@
 // (c) 2019 Technical University of Munich
 // Jakob Weiss <jakob.weiss@tum.de>
 
+#pragma once
 #include "UCVUMat.h"
 
 #include "OpenCV_Common.h"
@@ -9,7 +10,6 @@
 #include "Engine/TextureRenderTarget2D.h"
 #include "Engine/VolumeTexture.h"
 
-#include "OpenCV_Common.h"
 
 #define UPDATE_VOLUME_THROUGH_MIPS 1
 #define CV_ENABLE_INSTANCE_TRACKING 1

@@ -28,5 +28,9 @@ OPENCV_INCLUDES_START
 #undef check
 // your opencv include directives go here...
 #include "opencv2/opencv.hpp"
+#include "opencv2/video.hpp"
 OPENCV_INCLUDES_END
+
+// Declare our own log category
+DECLARE_LOG_CATEGORY_EXTERN(DeepMirrorPlugin, Log, All);
 
