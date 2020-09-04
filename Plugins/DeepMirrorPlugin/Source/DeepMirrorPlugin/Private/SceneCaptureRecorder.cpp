@@ -4,7 +4,7 @@
 #include "SceneCaptureRecorder.h"
 
 #include "Engine/Texture2D.h"
-#include "UCVUMat.h"
+
 #include "UObject/GCObjectScopeGuard.h"
 
 #include "OpenCV_Common.h"

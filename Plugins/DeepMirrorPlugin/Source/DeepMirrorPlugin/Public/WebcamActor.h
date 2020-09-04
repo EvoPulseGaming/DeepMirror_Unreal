@@ -7,27 +7,6 @@
 #include "Math/IntRect.h"
 #include "WebcamActor.generated.h"
 
-USTRUCT(BlueprintType)
-struct FFaceDetected
-{
-	GENERATED_BODY()
-
-		FFaceDetected() {}
-	FFaceDetected(FVector4 faceRect, int32 neighbors, int32 angle) : FaceRect(faceRect), Neighbors(neighbors), Angle(angle) {}
-
-	UPROPERTY(BlueprintReadOnly, Category = "FaceDetection")
-		FVector4 FaceRect;
-
-	UPROPERTY(BlueprintReadOnly, Category = "FaceDetection")
-		int32 Neighbors;
-
-	UPROPERTY(BlueprintReadOnly, Category = "FaceDetection")
-		int32 Angle;
-
-	UPROPERTY(BlueprintReadOnly, Category = "FaceDetection")
-		TArray<FVector2D> LandMarks;
-
-};
 
 UCLASS()
 class DEEPMIRRORPLUGIN_API AWebcamActor : public AActor
@@ -61,16 +40,7 @@ public:
 		TArray<FColor> CameraData;
 
 	UPROPERTY(EditAnywhere, Category = "FaceDetection")
-		bool bFaceDetect;
-
-	UPROPERTY(BlueprintReadOnly, Category = "FaceDetection")
-		TArray<FFaceDetected> DetectedFaces;
-
-	UPROPERTY(EditAnywhere, Category = "FaceDetection")
 		bool bDebugFaceLandmarks;
-
-	UFUNCTION(BlueprintNativeEvent, Category = "Webcam")
-		void OnNextFrame();
 
 	UPROPERTY(BlueprintReadOnly)
 		FRotator HeadRotator;
@@ -129,8 +99,6 @@ protected:
 	cv::Mat measurements[68];
 	cv::Point facePoints[68];
 
-	unsigned char* pBuffer;
-	int* pResult;
 
 	FTimerHandle timerHandle;
 	FUpdateTextureRegion2D* VideoUpdateTextureRegion;
@@ -140,7 +108,6 @@ protected:
 	void CameraTimerTick();
 	void UpdateTexture();
 
-	void DetectFace();
 	void ProcessShapeWithKalman(const dlib::full_object_detection& shape);
 private:
 	struct FUpdateTextureRegionsData

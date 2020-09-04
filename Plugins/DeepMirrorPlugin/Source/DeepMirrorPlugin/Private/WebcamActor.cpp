@@ -12,7 +12,6 @@ AWebcamActor::AWebcamActor()
 	CameraID = 0;
 	RefreshFPS = 15.f;
 	RefreshTime = 1000000.0f;
-	bFaceDetect = true;
 	bDebugFaceLandmarks = true;
 	VideoSize = FVector2D(0, 0);
 	Frame = new cv::Mat();
@@ -29,11 +28,6 @@ AWebcamActor::~AWebcamActor()
 		FMemory::Free(GrayFrame);
 		FMemory::Free(Size);
 		FMemory::Free(Webcam);
-
-		if (bFaceDetect)
-		{
-			FMemory::Free(pBuffer);
-		}
 	}
 }
 
@@ -42,12 +36,6 @@ void AWebcamActor::BeginPlay()
 	Super::BeginPlay();
 
 	bMemoryReleased = false;
-
-	if (bFaceDetect)
-	{
-		pResult = NULL;
-		pBuffer = (unsigned char*)FMemory::Malloc(DETECT_BUFFER_SIZE);
-	}
 
 	Webcam->open(CameraID);
 	if (Webcam->isOpened())
@@ -167,7 +155,7 @@ void AWebcamActor::BeginPlay()
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("A CAMERA NAO ABRIU"))
+		UE_LOG(LogTemp, Error, TEXT("Camera error, stream wont open"))
 	}
 
 	GetWorldTimerManager().SetTimer(timerHandle, this, &AWebcamActor::CameraTimerTick, 0.08f, true);
@@ -187,7 +175,6 @@ void AWebcamActor::CameraTimerTick()
 		RefreshTime -= 1.f / RefreshFPS;
 		UpdateFrame();
 		UpdateTexture();
-		OnNextFrame();
 	}
 }
 
@@ -196,12 +183,9 @@ void AWebcamActor::UpdateFrame()
 	if (bCamOpen)
 	{
 		Webcam->read(*Frame);
-		//TODO: eu posso manipular o fame aqui		
 		cv::cvtColor(*Frame, *GrayFrame, cv::COLOR_BGR2GRAY);
-		if (bFaceDetect)
-		{
-			DetectFace();
-		}
+		//Technically you should call ComputeHeadDataTick here, not manually in blueprints on timer
+		//But manually allows us to run at a slower tick so we don't bog down the app
 	}
 }
 
@@ -293,8 +277,6 @@ void AWebcamActor::ComputeHeadDataTick()
 	if (temp.empty())
 		return;
 
-	//FinalFrame = Frame->m.getMat(cv::ACCESS_READ).clone();
-
 	int FrameRate = 1;
 	int OptimizeScale = 2;
 	cv::Mat smallMat;
@@ -306,7 +288,7 @@ void AWebcamActor::ComputeHeadDataTick()
 		faces = detector(cimg_small);
 		if (faces.size() == 0)
 		{
-			UE_LOG(LogTemp, Error, TEXT("Can't dector face from cimg_small"));
+			UE_LOG(LogTemp, Error, TEXT("No face detected from cimg_small"));
 			return;
 		}
 	}
@@ -434,15 +416,6 @@ void AWebcamActor::ProcessShapeWithKalman(const dlib::full_object_detection& sha
 	}
 }
 
-void AWebcamActor::DetectFace()
-{
-
-}
-
-void AWebcamActor::OnNextFrame_Implementation()
-{
-}
-
 void AWebcamActor::EndPlay(EEndPlayReason::Type reasonType)
 {
 	if (bCamOpen)
@@ -454,7 +427,6 @@ void AWebcamActor::EndPlay(EEndPlayReason::Type reasonType)
 	FMemory::Free(Frame);
 	FMemory::Free(GrayFrame);
 	FMemory::Free(Webcam);
-	FMemory::Free(pBuffer);
 
 	bMemoryReleased = true;
 }
