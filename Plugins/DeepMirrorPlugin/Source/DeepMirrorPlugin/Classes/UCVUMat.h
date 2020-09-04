@@ -9,12 +9,12 @@
 
 #include "UCVUMat.generated.h"
 
-class FTextureRenderTarget2DResource;
-class FTexture2DResource;
-struct FUpdateTextureRegion2D;
-class UTextureRenderTarget2D;
-class UTexture2D;
-class UVolumeTexture;
+//class FTextureRenderTarget2DResource;
+//class FTexture2DResource;
+//struct FUpdateTextureRegion2D;
+//class UTextureRenderTarget2D;
+//class UTexture2D;
+//class UVolumeTexture;
 
 UENUM(BlueprintType)  //"BlueprintType" is essential to include
 enum class FCVMatType : uint8 {

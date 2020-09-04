@@ -7,6 +7,7 @@
 
 #include "Runtime/Core/Public/HAL/Runnable.h"
 #include "Runtime/Core/Public/HAL/RunnableThread.h"
+#include "DeepMirrorPlugin.h"
 
 
 using namespace cv;

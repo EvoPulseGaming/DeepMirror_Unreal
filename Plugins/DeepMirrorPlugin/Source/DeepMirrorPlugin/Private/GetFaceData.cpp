@@ -5,7 +5,7 @@
 #include "UCVUMat.h"
 #include "VideoCapture.h"
 
-#include <dlib/opencv/cv_image.h>
+#include "OpenCV_Common.h"
 
 // Sets default values
 AGetFaceData::AGetFaceData()
@@ -14,7 +14,7 @@ AGetFaceData::AGetFaceData()
 	PrimaryActorTick.bCanEverTick = true;
 
 	//important or crash
-	OptimizeCount = 1;
+	OptimizeCount = 2;
 	FaceCheckRate = 1;
 
 }
@@ -27,74 +27,7 @@ void AGetFaceData::BeginPlay()
 	
 }
 
-void AGetFaceData::ComputeHeadDataTick(UCVUMat* Frame)
-{
-	int FrameRate = FaceCheckRate;
-	int OptimizeScale = OptimizeCount;
-	int UpdateCount = 0;
-	FrontDector = dlib::get_frontal_face_detector();
 
-	if (Frame->m.empty())
-		return;
-
-	FinalFrame = Frame->m.getMat(cv::ACCESS_READ).clone();
-
-	cv::Mat smallMat;
-	cv::resize(FinalFrame, smallMat, cv::Size(), 1.0 / OptimizeScale, 1.0 / OptimizeScale);
-	dlib::cv_image<dlib::bgr_pixel> cimg(FinalFrame);
-	dlib::cv_image<dlib::bgr_pixel> cimg_small(smallMat);
-
-	//Detect faces   
-	if (UpdateCount++ % FrameRate == 0) {
-		faces = FrontDector(cimg_small);
-		if (faces.size() == 0)
-		{
-			UE_LOG(LogTemp, Error, TEXT("Can't dector face from cimg_small"));
-			return;
-		}
-	}
-	else
-	{
-		return;
-	}
-
-	// Find the pose of each face.  
-	std::vector<dlib::full_object_detection> shapes;
-
-	for (unsigned long i = 0; i < faces.size(); ++i) {
-		dlib::rectangle r(
-			(long)(faces[i].left()*OptimizeScale),
-			(long)(faces[i].top()*OptimizeScale),
-			(long)(faces[i].right()*OptimizeScale),
-			(long)(faces[i].bottom()*OptimizeScale)
-		);
-
-		dlib::full_object_detection shape = PoseModel(cimg, r);
-
-		//convert shape to points with kalman
-		ProcessShapeWithKalman(shape);
-		//calc face feature
-		CalcFaceFeature(shape);
-		//calc Head Info
-		CalcHeadInfo(shape);
-
-		// Custom Face Render
-		RenderFace(FinalFrame, shape);
-	}
-#if PLATFORM_WINDOWS
-//	cv::imshow("Example", FinalFrame);
-#endif
-
-
-}
-
-
-void AGetFaceData::Stop()
-{
-#if PLATFORM_WINDOWS
-//	cv::destroyWindow("Example");
-#endif
-}
 
 void AGetFaceData::Start()
 {
@@ -110,12 +43,8 @@ void AGetFaceData::Start()
 
 	FrontDector = dlib::get_frontal_face_detector();
 
-	FString ShapePath = FPaths::Combine(FPaths::GameContentDir(), TEXT("TestRes/shape_predictor_68_face_landmarks.dat"));
-#if PLATFORM_ANDROID
-	extern const FString &GetFileBasePath();
-	FString ProjectPath = GetFileBasePath();
-	ShapePath = FPaths::Combine(ProjectPath, FApp::GetProjectName(), TEXT("Content/TestRes/shape_predictor_68_face_landmarks.dat"));
-#endif
+	FString ShapePath = FPaths::Combine(FPaths::ProjectContentDir(), TEXT("TestRes/shape_predictor_68_face_landmarks.dat"));
+
 	std::ifstream StreamIn(TCHAR_TO_UTF8(*ShapePath), std::ios::binary);
 
 	deserialize(PoseModel, StreamIn);
@@ -190,6 +119,67 @@ void AGetFaceData::Start()
 	//we can start ticking ComputeHeadDataTick()
 }
 
+void AGetFaceData::ComputeHeadDataTick(UCVUMat* Frame)
+{
+	int FrameRate = FaceCheckRate;
+	int OptimizeScale = OptimizeCount;
+	int UpdateCount = 0;
+	FrontDector = dlib::get_frontal_face_detector();
+
+	if (Frame->m.empty())
+		return;
+
+	//FinalFrame = Frame->m.getMat(cv::ACCESS_READ).clone();
+
+	cv::Mat smallMat;
+	cv::resize(Frame->m, smallMat, cv::Size(), 1.0 / OptimizeScale, 1.0 / OptimizeScale);
+	dlib::cv_image<dlib::bgr_pixel> cimg(Frame->m.getMat(cv::ACCESS_FAST));
+	dlib::cv_image<dlib::bgr_pixel> cimg_small(smallMat);
+
+	//Detect faces   
+	if (UpdateCount++ % FrameRate == 0) {
+		faces = FrontDector(cimg_small);
+		if (faces.size() == 0)
+		{
+			UE_LOG(LogTemp, Error, TEXT("Can't dector face from cimg_small"));
+			return;
+		}
+	}
+	else
+	{
+		return;
+	}
+
+	// Find the pose of each face.  
+	std::vector<dlib::full_object_detection> shapes;
+
+	for (unsigned long i = 0; i < faces.size(); ++i) {
+		dlib::rectangle r(
+			(long)(faces[i].left()*OptimizeScale),
+			(long)(faces[i].top()*OptimizeScale),
+			(long)(faces[i].right()*OptimizeScale),
+			(long)(faces[i].bottom()*OptimizeScale)
+		);
+
+		dlib::full_object_detection shape = PoseModel(cimg, r);
+
+	}
+#if PLATFORM_WINDOWS
+	//	cv::imshow("Example", FinalFrame);
+#endif
+
+
+}
+
+void AGetFaceData::Stop()
+{
+#if PLATFORM_WINDOWS
+//	cv::destroyWindow("Example");
+#endif
+}
+
+
+
 // Called every frame
 void AGetFaceData::Tick(float DeltaTime)
 {
@@ -205,53 +195,53 @@ void AGetFaceData::InitDlib()
 void AGetFaceData::CalcFaceFeature(const dlib::full_object_detection& shape)
 {
 
-	float FaceHeight = FVector2D::Distance(FVector2D(facePoints[27].x, facePoints[27].y),
-		FVector2D(facePoints[8].x, facePoints[8].y));
+	//float FaceHeight = FVector2D::Distance(FVector2D(facePoints[27].x, facePoints[27].y),
+	//	FVector2D(facePoints[8].x, facePoints[8].y));
 
-	float FaceWidth = FVector2D::Distance(FVector2D(facePoints[0].x, facePoints[0].y),
-		FVector2D(facePoints[16].x, facePoints[16].y));
+	//float FaceWidth = FVector2D::Distance(FVector2D(facePoints[0].x, facePoints[0].y),
+	//	FVector2D(facePoints[16].x, facePoints[16].y));
 
-	float LengthBase = (FaceHeight + FaceWidth) / 2;
+	//float LengthBase = (FaceHeight + FaceWidth) / 2;
 
 
-	// //left eye
-	// float LeftEye1 = FVector2D::Distance(FVector2D(facePoints[37].x, facePoints[37].y),
-	//     FVector2D(facePoints[41].x, facePoints[41].y));
-	// float LeftEye2 = FVector2D::Distance(FVector2D(facePoints[38].x, facePoints[38].y),
-	//       FVector2D(facePoints[40].x, facePoints[40].y));
-	//
-	// LeftEyeWeight = ((LeftEye1 + LeftEye2)/2)/FaceHeight;
-	//
-	//
-	// //right eye
-	// float RightEye1 = FVector2D::Distance(FVector2D(facePoints[43].x, facePoints[43].y),
-	//     FVector2D(facePoints[47].x, facePoints[47].y));
-	// float RightEye2 = FVector2D::Distance(FVector2D(facePoints[44].x, facePoints[44].y),
-	//     FVector2D(facePoints[46].x, facePoints[46].y));
-	//
-	// RightEyeWeight = ((RightEye1 + RightEye2)/2)/FaceHeight;
+	//// //left eye
+	//// float LeftEye1 = FVector2D::Distance(FVector2D(facePoints[37].x, facePoints[37].y),
+	////     FVector2D(facePoints[41].x, facePoints[41].y));
+	//// float LeftEye2 = FVector2D::Distance(FVector2D(facePoints[38].x, facePoints[38].y),
+	////       FVector2D(facePoints[40].x, facePoints[40].y));
+	////
+	//// LeftEyeWeight = ((LeftEye1 + LeftEye2)/2)/FaceHeight;
+	////
+	////
+	//// //right eye
+	//// float RightEye1 = FVector2D::Distance(FVector2D(facePoints[43].x, facePoints[43].y),
+	////     FVector2D(facePoints[47].x, facePoints[47].y));
+	//// float RightEye2 = FVector2D::Distance(FVector2D(facePoints[44].x, facePoints[44].y),
+	////     FVector2D(facePoints[46].x, facePoints[46].y));
+	////
+	//// RightEyeWeight = ((RightEye1 + RightEye2)/2)/FaceHeight;
 
-	if ((shape.part(39).x() - shape.part(36).x()) == 0)
-	{
-		LeftEyeWeight = 0;
-	}
-	else
-	{
-		LeftEyeWeight = FMath::Abs((float)(shape.part(41).y() + shape.part(40).y() - shape.part(37).y() - shape.part(38).y()) / (shape.part(39).x() - shape.part(36).x()));
-	}
-	if ((shape.part(45).x() - shape.part(42).x()) == 0)
-	{
-		RightEyeWeight = 0;
-	}
-	else
-	{
-		RightEyeWeight = FMath::Abs((float)(shape.part(47).y() + shape.part(46).y() - shape.part(43).y() - shape.part(44).y()) / (shape.part(45).x() - shape.part(42).x()));
-	}
+	//if ((shape.part(39).x() - shape.part(36).x()) == 0)
+	//{
+	//	LeftEyeWeight = 0;
+	//}
+	//else
+	//{
+	//	LeftEyeWeight = FMath::Abs((float)(shape.part(41).y() + shape.part(40).y() - shape.part(37).y() - shape.part(38).y()) / (shape.part(39).x() - shape.part(36).x()));
+	//}
+	//if ((shape.part(45).x() - shape.part(42).x()) == 0)
+	//{
+	//	RightEyeWeight = 0;
+	//}
+	//else
+	//{
+	//	RightEyeWeight = FMath::Abs((float)(shape.part(47).y() + shape.part(46).y() - shape.part(43).y() - shape.part(44).y()) / (shape.part(45).x() - shape.part(42).x()));
+	//}
 
-	//Mouse
-	float MouseWidh = FVector2D::Distance(FVector2D(facePoints[51].x, facePoints[51].y),
-		FVector2D(facePoints[57].x, facePoints[57].y));
-	MouseWeight = (MouseWidh / LengthBase - 0.13)*1.27 + 0.02;
+	////Mouse
+	//float MouseWidh = FVector2D::Distance(FVector2D(facePoints[51].x, facePoints[51].y),
+	//	FVector2D(facePoints[57].x, facePoints[57].y));
+	//MouseWeight = (MouseWidh / LengthBase - 0.13)*1.27 + 0.02;
 
 }
 
@@ -275,24 +265,24 @@ void AGetFaceData::CalcHeadInfo(const dlib::full_object_detection& shape)
 	image_pts.push_back(facePoints[8]);   //#8 chin corner
 
 	//calc pose
-	cv::solvePnP(object_pts, image_pts, cam_matrix, dist_coeffs, rotation_vec, translation_vec);
+	cv::solvePnPRansac(object_pts, image_pts, cam_matrix, dist_coeffs, rotation_vec, translation_vec);
 
 	//reproject
 	cv::projectPoints(reprojectsrc, rotation_vec, translation_vec, cam_matrix, dist_coeffs, reprojectdst);
 
 	//draw axis
-	cv::line(FinalFrame, reprojectdst[0], reprojectdst[1], cv::Scalar(0, 0, 255));
-	cv::line(FinalFrame, reprojectdst[1], reprojectdst[2], cv::Scalar(0, 0, 255));
-	cv::line(FinalFrame, reprojectdst[2], reprojectdst[3], cv::Scalar(0, 0, 255));
-	cv::line(FinalFrame, reprojectdst[3], reprojectdst[0], cv::Scalar(0, 0, 255));
-	cv::line(FinalFrame, reprojectdst[4], reprojectdst[5], cv::Scalar(0, 0, 255));
-	cv::line(FinalFrame, reprojectdst[5], reprojectdst[6], cv::Scalar(0, 0, 255));
-	cv::line(FinalFrame, reprojectdst[6], reprojectdst[7], cv::Scalar(0, 0, 255));
-	cv::line(FinalFrame, reprojectdst[7], reprojectdst[4], cv::Scalar(0, 0, 255));
-	cv::line(FinalFrame, reprojectdst[0], reprojectdst[4], cv::Scalar(0, 0, 255));
-	cv::line(FinalFrame, reprojectdst[1], reprojectdst[5], cv::Scalar(0, 0, 255));
-	cv::line(FinalFrame, reprojectdst[2], reprojectdst[6], cv::Scalar(0, 0, 255));
-	cv::line(FinalFrame, reprojectdst[3], reprojectdst[7], cv::Scalar(0, 0, 255));
+	//cv::line(FinalFrame, reprojectdst[0], reprojectdst[1], cv::Scalar(0, 0, 255));
+	//cv::line(FinalFrame, reprojectdst[1], reprojectdst[2], cv::Scalar(0, 0, 255));
+	//cv::line(FinalFrame, reprojectdst[2], reprojectdst[3], cv::Scalar(0, 0, 255));
+	//cv::line(FinalFrame, reprojectdst[3], reprojectdst[0], cv::Scalar(0, 0, 255));
+	//cv::line(FinalFrame, reprojectdst[4], reprojectdst[5], cv::Scalar(0, 0, 255));
+	//cv::line(FinalFrame, reprojectdst[5], reprojectdst[6], cv::Scalar(0, 0, 255));
+	//cv::line(FinalFrame, reprojectdst[6], reprojectdst[7], cv::Scalar(0, 0, 255));
+	//cv::line(FinalFrame, reprojectdst[7], reprojectdst[4], cv::Scalar(0, 0, 255));
+	//cv::line(FinalFrame, reprojectdst[0], reprojectdst[4], cv::Scalar(0, 0, 255));
+	//cv::line(FinalFrame, reprojectdst[1], reprojectdst[5], cv::Scalar(0, 0, 255));
+	//cv::line(FinalFrame, reprojectdst[2], reprojectdst[6], cv::Scalar(0, 0, 255));
+	//cv::line(FinalFrame, reprojectdst[3], reprojectdst[7], cv::Scalar(0, 0, 255));
 
 	//calc euler angle
 	cv::Rodrigues(rotation_vec, rotation_mat);

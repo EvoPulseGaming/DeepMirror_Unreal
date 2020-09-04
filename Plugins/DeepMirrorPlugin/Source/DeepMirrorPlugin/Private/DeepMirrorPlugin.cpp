@@ -2,6 +2,8 @@
 #pragma once
 #include "DeepMirrorPlugin.h"
 
+#include "CoreMinimal.h"
+
 #define LOCTEXT_NAMESPACE "FDeepMirrorPluginModule"
 DEFINE_LOG_CATEGORY(DeepMirrorPlugin);
 

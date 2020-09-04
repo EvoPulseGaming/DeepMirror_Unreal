@@ -2,13 +2,15 @@
 // Jakob Weiss <jakob.weiss@tum.de>
 
 #pragma once
+
 #include "UCVUMat.h"
-
-#include "OpenCV_Common.h"
-
 #include "Engine/Texture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Engine/VolumeTexture.h"
+#include "DeepMirrorPlugin.h"
+
+#include "OpenCV_Common.h"
+
 
 
 #define UPDATE_VOLUME_THROUGH_MIPS 1

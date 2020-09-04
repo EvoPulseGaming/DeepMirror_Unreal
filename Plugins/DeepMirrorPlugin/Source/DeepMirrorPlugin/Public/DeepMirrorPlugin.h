@@ -1,9 +1,9 @@
 // Copyright 1998-2019 Epic Games, Inc. All Rights Reserved.
 
 #pragma once
-
+#include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
-#include "OpenCV_Common.h"
+
 class FDeepMirrorPluginModule : public IModuleInterface
 {
 public:
@@ -14,3 +14,5 @@ public:
 };
 
 
+// Declare our own log category
+DECLARE_LOG_CATEGORY_EXTERN(DeepMirrorPlugin, Log, All);

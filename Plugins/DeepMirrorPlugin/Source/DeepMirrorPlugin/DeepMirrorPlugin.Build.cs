@@ -5,6 +5,14 @@ using UnrealBuildTool;
 
 public class DeepMirrorPlugin : ModuleRules
 {
+	private string LibFacePath
+	{
+		get
+		{
+			return Path.Combine(ModuleDirectory, "../libfacedetection");
+		}
+	}
+
 	public DeepMirrorPlugin(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
@@ -15,6 +23,9 @@ public class DeepMirrorPlugin : ModuleRules
 		//for c4668  err
 		bEnableUndefinedIdentifierWarnings = false;
 		bEnableExceptions = true;
+		
+
+
 
 
 
@@ -23,16 +34,21 @@ public class DeepMirrorPlugin : ModuleRules
 				// ... add public include paths required here ...
                 Path.Combine(ModuleDirectory, "Public"),
 				Path.Combine(ModuleDirectory, "Classes"),
+				Path.Combine(ModuleDirectory, "../libfacedetection/include"),
 			}
 			);
-				
-		
+
+
+
 		PrivateIncludePaths.AddRange(
 			new string[] {
 				// ... add other private include paths required here ...
 				Path.Combine(ModuleDirectory, "Private"),
+				Path.Combine(ModuleDirectory, "../libfacedetection/include"),
+				//Path.Combine(ModuleDirectory, "../Dlib"),
 			}
 			);
+			
 			
 		
 		PublicDependencyModuleNames.AddRange(
@@ -57,7 +73,8 @@ public class DeepMirrorPlugin : ModuleRules
 				"Slate",
 				"SlateCore",
 				"OpenCV",
-				"OpenCVHelper"
+				"OpenCVHelper",
+				"Dlib",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
@@ -76,5 +93,21 @@ public class DeepMirrorPlugin : ModuleRules
 				// ... add any modules that your module loads dynamically here ...
 			}
 			);
+
+		PublicIncludePaths.AddRange(
+	new string[] {
+					Path.Combine(LibFacePath, "include")
+		}
+	);
+
+		//libfacedetection
+		PublicLibraryPaths.Add(Path.Combine(LibFacePath, "lib", "Win64"));
+		PublicAdditionalLibraries.Add(Path.Combine(LibFacePath, "lib", "Win64", "libfacedetect-x64.lib"));
+		PublicDelayLoadDLLs.Add(Path.Combine(LibFacePath, "lib", "Win64", "libfacedetect-x64.dll"));
+		PublicAdditionalLibraries.Add(Path.Combine(LibFacePath, "lib", "Win64", "libfacedetectcnn-x64.lib"));
+		PublicDelayLoadDLLs.Add(Path.Combine(LibFacePath, "lib", "Win64", "libfacedetectcnn-x64.dll"));
+
+		//DLIB_USE_CUDA
+		//DLIB_USE_BLAS
 	}
 }

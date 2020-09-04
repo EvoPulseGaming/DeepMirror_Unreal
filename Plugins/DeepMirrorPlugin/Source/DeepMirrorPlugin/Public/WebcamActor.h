@@ -1,0 +1,159 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/Actor.h"
+#include "OpenCV_Common.h"
+#include "RHI.h"
+#include "Math/IntRect.h"
+#include "WebcamActor.generated.h"
+
+USTRUCT(BlueprintType)
+struct FFaceDetected
+{
+	GENERATED_BODY()
+
+		FFaceDetected() {}
+	FFaceDetected(FVector4 faceRect, int32 neighbors, int32 angle) : FaceRect(faceRect), Neighbors(neighbors), Angle(angle) {}
+
+	UPROPERTY(BlueprintReadOnly, Category = "FaceDetection")
+		FVector4 FaceRect;
+
+	UPROPERTY(BlueprintReadOnly, Category = "FaceDetection")
+		int32 Neighbors;
+
+	UPROPERTY(BlueprintReadOnly, Category = "FaceDetection")
+		int32 Angle;
+
+	UPROPERTY(BlueprintReadOnly, Category = "FaceDetection")
+		TArray<FVector2D> LandMarks;
+
+};
+
+UCLASS()
+class DEEPMIRRORPLUGIN_API AWebcamActor : public AActor
+{
+	GENERATED_BODY()
+
+public:
+	AWebcamActor();
+	~AWebcamActor();
+	virtual void Tick(float DeltaTime) override;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Webcam")
+		int32 CameraID;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Webcam")
+		FVector2D VideoSize;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Webcam")
+		float RefreshFPS;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Webcam")
+		float RefreshTime;
+
+	UPROPERTY(BlueprintReadWrite, Category = "WebcamTexture")
+		UTexture2D* VideoTexture;
+
+	UPROPERTY(BlueprintReadOnly, Category = "WebcamInternals")
+		bool bCamOpen;
+
+	UPROPERTY(BlueprintReadWrite, Category = "WebcamData")
+		TArray<FColor> CameraData;
+
+	UPROPERTY(EditAnywhere, Category = "FaceDetection")
+		bool bFaceDetect;
+
+	UPROPERTY(BlueprintReadOnly, Category = "FaceDetection")
+		TArray<FFaceDetected> DetectedFaces;
+
+	UPROPERTY(EditAnywhere, Category = "FaceDetection")
+		bool bDebugFaceLandmarks;
+
+	UFUNCTION(BlueprintNativeEvent, Category = "Webcam")
+		void OnNextFrame();
+
+	UPROPERTY(BlueprintReadOnly)
+		FRotator HeadRotator;
+
+	UPROPERTY(BlueprintReadOnly)
+		FVector HeadLocation;
+
+	UFUNCTION(BlueprintCallable, Category = "Dlib|DetectFacePose")
+		void ComputeHeadDataTick();
+
+	virtual void EndPlay(EEndPlayReason::Type reasonType) override;
+
+protected:
+	virtual void BeginPlay() override;
+
+	//Intrisics can be calculated using opencv sample code under opencv/sources/samples/cpp/tutorial_code/calib3d
+	//Normally, you can also apprximate fx and fy by image width, cx by half image width, cy by half image height instead
+	double K[9] = { 6.5308391993466671e+002, 0.0, 3.1950000000000000e+002, 0.0, 6.5308391993466671e+002, 2.3950000000000000e+002, 0.0, 0.0, 1.0 };
+	double D[5] = { 7.0834633684407095e-002, 6.9140193737175351e-002, 0.0, 0.0, -1.3073460323689292e+000 };
+	//fill in cam intrinsics and distortion coefficients
+	cv::Mat cam_matrix = cv::Mat(3, 3, CV_64FC1, K);
+	cv::Mat dist_coeffs = cv::Mat(5, 1, CV_64FC1, D);
+
+
+	int UpdateCount;
+
+	cv::Mat* Frame;
+	cv::Mat* GrayFrame;
+	cv::VideoCapture* Webcam;
+	cv::Size* Size;
+	dlib::frontal_face_detector detector;
+	dlib::shape_predictor predictor;
+	//fill in 3D ref points(world coordinates), model referenced from http://aifi.isr.uc.pt/Downloads/OpenGL/glAnthropometric3DModel.cpp
+	std::vector<cv::Point3d> object_pts;
+	//2D ref points(image coordinates), referenced from detected facial feature
+	std::vector<cv::Point2d> image_pts;
+	//reprojected 2D points
+	std::vector<cv::Point2d> reprojectdst;
+	//reproject 3D points world coordinate axis to verify result pose
+	std::vector<cv::Point3d> reprojectsrc;
+
+	//result
+	cv::Mat rotation_vec;                           //3 x 1
+	cv::Mat rotation_mat;                           //3 x 3 R
+	cv::Mat translation_vec;                        //3 x 1 T
+	cv::Mat pose_mat;							     //3 x 4 R | T
+	cv::Mat euler_angle;
+
+	//temp buf for decomposeProjectionMatrix()
+	cv::Mat out_intrinsics;
+	cv::Mat out_rotation;
+	cv::Mat out_translation;
+
+	//Filter
+	cv::KalmanFilter KFs[68];
+	cv::Mat measurements[68];
+	cv::Point facePoints[68];
+
+	unsigned char* pBuffer;
+	int* pResult;
+
+	FTimerHandle timerHandle;
+	FUpdateTextureRegion2D* VideoUpdateTextureRegion;
+
+	void UpdateTextureRegions(UTexture2D* Texture, int32 MipIndex, uint32 NumRegions, FUpdateTextureRegion2D* Regions, uint32 SrcPitch, uint32 SrcBpp, uint8* SrcData, bool bFreeData);
+	void UpdateFrame();
+	void CameraTimerTick();
+	void UpdateTexture();
+
+	void DetectFace();
+	void ProcessShapeWithKalman(const dlib::full_object_detection& shape);
+private:
+	struct FUpdateTextureRegionsData
+	{
+		FTexture2DResource* Texture2DResource;
+		int32 MipIndex;
+		uint32 NumRegions;
+		FUpdateTextureRegion2D* Regions;
+		uint32 SrcPitch;
+		uint32 SrcBpp;
+		uint8 * SrcData;
+	};
+
+	bool bMemoryReleased;
+
+};

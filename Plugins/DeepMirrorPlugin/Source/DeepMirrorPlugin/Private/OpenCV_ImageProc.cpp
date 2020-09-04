@@ -3,6 +3,7 @@
 #pragma once
 #include "OpenCV_ImageProc.h"
 #include "OpenCV_Common.h"
+#include "DeepMirrorPlugin.h"
 
 
 UCVUMat* UOpenCV_ImageProcessing::gaussianFilter(const UCVUMat* src, UCVUMat* dst, float sigma) {

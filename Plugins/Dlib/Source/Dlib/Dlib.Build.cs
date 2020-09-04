@@ -56,7 +56,9 @@ public class Dlib : ModuleRules
 			}
 			);
 
-
+		PublicDefinitions.Add("DLIB_NO_GUI_SUPPORT");
+		PublicDefinitions.Add("USE_AVX_INSTRUCTIONS");
+		PublicDefinitions.Add("USE_SSE4_INSTRUCTIONS");
 
 		string IncludePath = Path.Combine(ModuleDirectory, "../../Include");
 		string LibraryPath = Path.Combine(ModuleDirectory, "../../Library");

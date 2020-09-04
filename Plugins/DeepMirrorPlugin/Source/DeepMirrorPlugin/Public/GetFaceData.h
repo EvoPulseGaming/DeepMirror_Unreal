@@ -7,11 +7,9 @@
 #include "GameFramework/Actor.h"
 
 #include "OpenCV_Common.h"
-#include "FaceFrameCalcThread.h"
 
 //dlib
-#include "dlib/image_processing/frontal_face_detector.h"
-#include "dlib/image_processing.h" 
+
 
 #include "GetFaceData.generated.h"
 
@@ -60,7 +58,7 @@ public:
 		UCVUMat* frame;
 
 	cv::Mat FinalFrame;
-
+	
 	dlib::frontal_face_detector FrontDector;
 	dlib::shape_predictor PoseModel;
 	std::vector<dlib::rectangle> faces;
