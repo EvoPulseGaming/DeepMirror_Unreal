@@ -78,7 +78,7 @@ protected:
 
 	int UpdateCount;
 
-	cv::Mat* Frame;
+	cv::Mat Frame;
 	cv::Mat* GrayFrame;
 	cv::VideoCapture* Webcam;
 	cv::Size* Size;
@@ -102,7 +102,7 @@ protected:
 	cv::Mat rotation_mat;//3 x 3 R
 	cv::Mat translation_vec;//3 x 1 T
 
-	cv::Mat temp;
+	//cv::Mat temp;
 	cv::Mat smallMat;
 
 	//result

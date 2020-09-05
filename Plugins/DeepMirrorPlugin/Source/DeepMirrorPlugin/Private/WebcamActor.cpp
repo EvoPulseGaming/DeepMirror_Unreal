@@ -14,7 +14,7 @@ AWebcamActor::AWebcamActor()
 	RefreshTime = 1000000.0f;
 	bDebugFaceLandmarks = true;
 	VideoSize = FVector2D(0, 0);
-	Frame = new cv::Mat();
+	//Frame = new cv::Mat();
 	GrayFrame = new cv::Mat();
 	Webcam = new cv::VideoCapture();
 
@@ -24,7 +24,7 @@ AWebcamActor::~AWebcamActor()
 {
 	if (!bMemoryReleased)
 	{
-		FMemory::Free(Frame);
+		//FMemory::Free(Frame);
 		FMemory::Free(GrayFrame);
 		FMemory::Free(Size);
 		FMemory::Free(Webcam);
@@ -42,7 +42,7 @@ void AWebcamActor::BeginPlay()
 	{
 		bCamOpen = true;
 		UpdateFrame();
-		VideoSize = FVector2D(Frame->cols, Frame->rows);
+		VideoSize = FVector2D(Frame.cols, Frame.rows);
 		Size = new cv::Size(VideoSize.X, VideoSize.Y);
 		VideoTexture = UTexture2D::CreateTransient(VideoSize.X, VideoSize.Y);
 		VideoTexture->UpdateResource();
@@ -181,8 +181,9 @@ void AWebcamActor::UpdateFrame()
 {
 	if (bCamOpen)
 	{
-		Webcam->read(*Frame);
-		cv::cvtColor(*Frame, *GrayFrame, cv::COLOR_BGR2GRAY);
+		Webcam->read(Frame);
+		cv::cvtColor(Frame, *GrayFrame, cv::COLOR_BGR2GRAY);
+		ComputeHeadDataTick();
 		//Technically you should call ComputeHeadDataTick here, not manually in blueprints on timer
 		//But manually allows us to run at a slower tick so we don't bog down the app
 	}
@@ -190,16 +191,16 @@ void AWebcamActor::UpdateFrame()
 
 void AWebcamActor::UpdateTexture()
 {
-	if (bCamOpen && Frame->data)
+	if (bCamOpen && Frame.data)
 	{
 		for (int y = 0; y < VideoSize.Y; y++)
 		{
 			for (int x = 0; x < VideoSize.X; x++)
 			{
 				int i = x + (y * VideoSize.X);
-				CameraData[i].B = Frame->data[i * 3 + 0];
-				CameraData[i].G = Frame->data[i * 3 + 1];
-				CameraData[i].R = Frame->data[i * 3 + 2];
+				CameraData[i].B = Frame.data[i * 3 + 0];
+				CameraData[i].G = Frame.data[i * 3 + 1];
+				CameraData[i].R = Frame.data[i * 3 + 2];
 			}
 		}
 
@@ -256,11 +257,21 @@ void AWebcamActor::UpdateTextureRegions(UTexture2D * Texture, int32 MipIndex, ui
 	}
 }
 
+static cv::Rect dlibRectangleToOpenCV(dlib::rectangle r)
+{
+	return cv::Rect(cv::Point2i(r.left(), r.top()), cv::Point2i(r.right() + 1, r.bottom() + 1));
+}
+
+static dlib::rectangle openCVRectToDlib(cv::Rect r)
+{
+	return dlib::rectangle((long)r.tl().x, (long)r.tl().y, (long)r.br().x - 1, (long)r.br().y - 1);
+}
+
 void AWebcamActor::ComputeHeadDataTick()
 {
 
 	// Grab a frame
-	*Webcam >> temp;
+	//*Webcam >> temp;
 
 
 
@@ -272,16 +283,16 @@ void AWebcamActor::ComputeHeadDataTick()
 
 	//detector = dlib::get_frontal_face_detector();
 
-	if (temp.empty())
+	if (Frame.empty() && !Frame.data)
 		return;
 
 
-	cv::resize(temp, smallMat, cv::Size(), 1.0 / FACE_DOWNSAMPLE_RATIO, 1.0 / FACE_DOWNSAMPLE_RATIO);
-	dlib::cv_image<dlib::bgr_pixel> cimg(temp);
-	dlib::cv_image<dlib::bgr_pixel> cimg_small(smallMat);
+	cv::resize(Frame, smallMat, cv::Size(), 1.0 / FACE_DOWNSAMPLE_RATIO, 1.0 / FACE_DOWNSAMPLE_RATIO);
+	dlib::cv_image<dlib::bgr_pixel> cimg(Frame);
+	//dlib::cv_image<dlib::bgr_pixel> cimg_small(smallMat);
 	//Detect faces   
 	if (UpdateCount++ % SKIP_FRAMES == 0) {	//skip X frames between detection
-		faces = detector(cimg_small);
+		faces = detector(cimg);
 		if (faces.size() == 0)
 		{
 			UE_LOG(LogTemp, Error, TEXT("No face detected from cimg_small"));
@@ -312,26 +323,33 @@ void AWebcamActor::ComputeHeadDataTick()
 	{
 		for (unsigned long i = 0; i < faces.size(); ++i) {
 			dlib::rectangle r(
-				(long)(faces[i].left()*FACE_DOWNSAMPLE_RATIO),
-				(long)(faces[i].top()*FACE_DOWNSAMPLE_RATIO),
-				(long)(faces[i].right()*FACE_DOWNSAMPLE_RATIO),
-				(long)(faces[i].bottom()*FACE_DOWNSAMPLE_RATIO)
+				//(long)(faces[i].left()*FACE_DOWNSAMPLE_RATIO),
+				//(long)(faces[i].top()*FACE_DOWNSAMPLE_RATIO),
+				//(long)(faces[i].right()*FACE_DOWNSAMPLE_RATIO),
+				//(long)(faces[i].bottom()*FACE_DOWNSAMPLE_RATIO)
+				(long)(faces[i].left()),
+				(long)(faces[i].top()),
+				(long)(faces[i].right()),
+				(long)(faces[i].bottom())
 			);
 
-			shape = pose_model_shape_predictor(cimg, r);
+			//track features
+			dlib::full_object_detection shape = pose_model_shape_predictor(cimg, faces[0]);
+			shape = pose_model_shape_predictor(cimg, shape.get_rect());
 			shapes.push_back(shape);
 
 
+			cv::rectangle(Frame, dlibRectangleToOpenCV(r), (1,0,1),5);
 
 
-			//track features
-			//dlib::full_object_detection shape = pose_model_shape_predictor(cimg, faces[0]);
+
+			
 
 			//draw features
-			//for (unsigned int i = 0; i < 68; ++i)
-			//{
-			//	cv::circle(temp, cv::Point(shape.part(i).x(), shape.part(i).y()), 2, cv::Scalar(0, 0, 255), -1);
-			//}
+			for (unsigned int i = 0; i < 68; ++i)
+			{
+				cv::circle(Frame, cv::Point(shape.part(i).x(), shape.part(i).y()), 2, cv::Scalar(0, 0, 255), -1);
+			}
 
 
 			//ProcessShapeWithKalman(shape);
@@ -369,8 +387,8 @@ void AWebcamActor::ComputeHeadDataTick()
 			//image_pts.push_back(cv::Point2d(shape.part(54).x(), shape.part(54).y()));    // Right mouth corner
 
 
-			double focal_length = temp.cols;
-			camera_matrix = get_camera_matrix(focal_length, cv::Point2d(temp.cols / 2, temp.rows / 2));
+			double focal_length = Frame.cols;
+			camera_matrix = get_camera_matrix(focal_length, cv::Point2d(Frame.cols / 2, Frame.rows / 2));
 
 
 			dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<double>::type);
@@ -409,6 +427,8 @@ void AWebcamActor::ComputeHeadDataTick()
 			HeadRotator.Yaw = euler_angle.at<double>(1);
 			HeadRotator.Roll = -euler_angle.at<double>(2);
 
+			out_translation = rotation_mat.t() * translation_vec;
+
 			HeadLocation.X = out_translation.at<double>(0);
 			HeadLocation.Y = out_translation.at<double>(1);
 			HeadLocation.Z = out_translation.at<double>(2);
@@ -446,7 +466,7 @@ void AWebcamActor::EndPlay(EEndPlayReason::Type reasonType)
 		bCamOpen = false;
 	}
 
-	FMemory::Free(Frame);
+	//FMemory::Free(Frame);
 	FMemory::Free(GrayFrame);
 	FMemory::Free(Webcam);
 
