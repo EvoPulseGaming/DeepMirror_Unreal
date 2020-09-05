@@ -48,6 +48,16 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		FVector HeadLocation;
 
+	UPROPERTY(EditAnywhere, Category = "FaceDetection")
+	int SKIP_FRAMES = 2;
+	UPROPERTY(EditAnywhere, Category = "FaceDetection")
+	int FACE_DOWNSAMPLE_RATIO = 4;
+	//1.kalman filter setup  
+	UPROPERTY(EditAnywhere, Category = "FaceDetection")
+	int stateNum = 4;
+	UPROPERTY(EditAnywhere, Category = "FaceDetection")
+	int measureNum = 2;
+
 	UFUNCTION(BlueprintCallable, Category = "Dlib|DetectFacePose")
 		void ComputeHeadDataTick();
 
@@ -61,7 +71,8 @@ protected:
 	double K[9] = { 6.5308391993466671e+002, 0.0, 3.1950000000000000e+002, 0.0, 6.5308391993466671e+002, 2.3950000000000000e+002, 0.0, 0.0, 1.0 };
 	double D[5] = { 7.0834633684407095e-002, 6.9140193737175351e-002, 0.0, 0.0, -1.3073460323689292e+000 };
 	//fill in cam intrinsics and distortion coefficients
-	cv::Mat cam_matrix = cv::Mat(3, 3, CV_64FC1, K);
+	cv::Mat camera_matrix = cv::Mat(3, 3, CV_64FC1, K);
+
 	cv::Mat dist_coeffs = cv::Mat(5, 1, CV_64FC1, D);
 
 
@@ -72,9 +83,10 @@ protected:
 	cv::VideoCapture* Webcam;
 	cv::Size* Size;
 	dlib::frontal_face_detector detector;
-	dlib::shape_predictor predictor;
+	dlib::shape_predictor pose_model_shape_predictor;
 	//fill in 3D ref points(world coordinates), model referenced from http://aifi.isr.uc.pt/Downloads/OpenGL/glAnthropometric3DModel.cpp
-	std::vector<cv::Point3d> object_pts;
+	std::vector<cv::Point3d> object_compare_pts;
+
 	//2D ref points(image coordinates), referenced from detected facial feature
 	std::vector<cv::Point2d> image_pts;
 	//reprojected 2D points
@@ -82,10 +94,18 @@ protected:
 	//reproject 3D points world coordinate axis to verify result pose
 	std::vector<cv::Point3d> reprojectsrc;
 
+	std::vector<dlib::full_object_detection> shapes;
+	dlib::full_object_detection shape;
+	std::vector<dlib::rectangle> faces;
+
+	cv::Mat rotation_vec; //3 x 1
+	cv::Mat rotation_mat;//3 x 3 R
+	cv::Mat translation_vec;//3 x 1 T
+
+	cv::Mat temp;
+	cv::Mat smallMat;
+
 	//result
-	cv::Mat rotation_vec;                           //3 x 1
-	cv::Mat rotation_mat;                           //3 x 3 R
-	cv::Mat translation_vec;                        //3 x 1 T
 	cv::Mat pose_mat;							     //3 x 4 R | T
 	cv::Mat euler_angle;
 
@@ -107,6 +127,8 @@ protected:
 	void UpdateFrame();
 	void CameraTimerTick();
 	void UpdateTexture();
+
+	cv::Mat get_camera_matrix(float focal_length, cv::Point2d center);
 
 	void ProcessShapeWithKalman(const dlib::full_object_detection& shape);
 private:
