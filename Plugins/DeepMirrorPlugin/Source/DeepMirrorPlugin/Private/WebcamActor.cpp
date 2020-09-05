@@ -289,10 +289,10 @@ void AWebcamActor::ComputeHeadDataTick()
 
 	cv::resize(Frame, smallMat, cv::Size(), 1.0 / FACE_DOWNSAMPLE_RATIO, 1.0 / FACE_DOWNSAMPLE_RATIO);
 	dlib::cv_image<dlib::bgr_pixel> cimg(Frame);
-	//dlib::cv_image<dlib::bgr_pixel> cimg_small(smallMat);
+	dlib::cv_image<dlib::bgr_pixel> cimg_small(smallMat);
 	//Detect faces   
 	if (UpdateCount++ % SKIP_FRAMES == 0) {	//skip X frames between detection
-		faces = detector(cimg);
+		faces = detector(cimg_small);
 		if (faces.size() == 0)
 		{
 			UE_LOG(LogTemp, Error, TEXT("No face detected from cimg_small"));
@@ -315,127 +315,126 @@ void AWebcamActor::ComputeHeadDataTick()
 
 //	dlib::cv_image<dlib::bgr_pixel> cimg(temp);
 
-	// Detect faces
+// Detect faces
 //	std::vector<dlib::rectangle> faces = detector(cimg);
 
-	// Find the pose of each face
-	if (faces.size() > 0)
-	{
-		for (unsigned long i = 0; i < faces.size(); ++i) {
-			dlib::rectangle r(
-				//(long)(faces[i].left()*FACE_DOWNSAMPLE_RATIO),
-				//(long)(faces[i].top()*FACE_DOWNSAMPLE_RATIO),
-				//(long)(faces[i].right()*FACE_DOWNSAMPLE_RATIO),
-				//(long)(faces[i].bottom()*FACE_DOWNSAMPLE_RATIO)
-				(long)(faces[i].left()),
-				(long)(faces[i].top()),
-				(long)(faces[i].right()),
-				(long)(faces[i].bottom())
-			);
+// Find the pose of each face
 
-			//track features
-			dlib::full_object_detection shape = pose_model_shape_predictor(cimg, faces[0]);
-			shape = pose_model_shape_predictor(cimg, shape.get_rect());
-			shapes.push_back(shape);
+	for (unsigned long i = 0; i < faces.size(); ++i) {
+		dlib::rectangle r(
+			(long)(faces[i].left()*FACE_DOWNSAMPLE_RATIO),
+			(long)(faces[i].top()*FACE_DOWNSAMPLE_RATIO),
+			(long)(faces[i].right()*FACE_DOWNSAMPLE_RATIO),
+			(long)(faces[i].bottom()*FACE_DOWNSAMPLE_RATIO)
+		);
 
 
-			cv::rectangle(Frame, dlibRectangleToOpenCV(r), (1,0,1),5);
+
+		// Landmark detection on full sized image
+		shape = pose_model_shape_predictor(cimg, r);
+		shapes.push_back(shape);
+
+
+
+
+		//Render square around face
+		cv::rectangle(Frame, dlibRectangleToOpenCV(r), (1,0,1),5);
 
 
 
 			
 
-			//draw features
-			for (unsigned int i = 0; i < 68; ++i)
-			{
-				cv::circle(Frame, cv::Point(shape.part(i).x(), shape.part(i).y()), 2, cv::Scalar(0, 0, 255), -1);
-			}
+		//draw features
+		for (unsigned int i = 0; i < 68; ++i)
+		{
 
-
-			//ProcessShapeWithKalman(shape);
-
-
-			//calc Head Info
-//			CalcHeadInfo(shape);
-
-			// Custom Face Render
-//			RenderFace(FinalFrame, shape);
-
-			//fill in 2D ref points, annotations follow https://ibug.doc.ic.ac.uk/resources/300-W/
-			//2D ref points(image coordinates), referenced from detected facial feature
-			//std::vector<cv::Point2d> image_pts;
-			image_pts.push_back(cv::Point2d(shape.part(17).x(), shape.part(17).y())); //#17 left brow left corner
-			image_pts.push_back(cv::Point2d(shape.part(21).x(), shape.part(21).y())); //#21 left brow right corner
-			image_pts.push_back(cv::Point2d(shape.part(22).x(), shape.part(22).y())); //#22 right brow left corner
-			image_pts.push_back(cv::Point2d(shape.part(26).x(), shape.part(26).y())); //#26 right brow right corner
-			image_pts.push_back(cv::Point2d(shape.part(36).x(), shape.part(36).y())); //#36 left eye left corner
-			image_pts.push_back(cv::Point2d(shape.part(39).x(), shape.part(39).y())); //#39 left eye right corner
-			image_pts.push_back(cv::Point2d(shape.part(42).x(), shape.part(42).y())); //#42 right eye left corner
-			image_pts.push_back(cv::Point2d(shape.part(45).x(), shape.part(45).y())); //#45 right eye right corner
-			image_pts.push_back(cv::Point2d(shape.part(31).x(), shape.part(31).y())); //#31 nose left corner
-			image_pts.push_back(cv::Point2d(shape.part(35).x(), shape.part(35).y())); //#35 nose right corner
-			image_pts.push_back(cv::Point2d(shape.part(48).x(), shape.part(48).y())); //#48 mouth left corner
-			image_pts.push_back(cv::Point2d(shape.part(54).x(), shape.part(54).y())); //#54 mouth right corner
-			image_pts.push_back(cv::Point2d(shape.part(57).x(), shape.part(57).y())); //#57 mouth central bottom corner
-			image_pts.push_back(cv::Point2d(shape.part(8).x(), shape.part(8).y()));   //#8 chin corner
-			//	//fill in 2D ref points, annotations follow https://ibug.doc.ic.ac.uk/resources/300-W/
-			//image_pts.push_back(cv::Point2d(shape.part(30).x(), shape.part(30).y()));    // Nose tip
-			//image_pts.push_back(cv::Point2d(shape.part(8).x(), shape.part(8).y()));      // Chin
-			//image_pts.push_back(cv::Point2d(shape.part(36).x(), shape.part(36).y()));    // Left eye left corner
-			//image_pts.push_back(cv::Point2d(shape.part(45).x(), shape.part(45).y()));    // Right eye right corner
-			//image_pts.push_back(cv::Point2d(shape.part(48).x(), shape.part(48).y()));    // Left Mouth corner
-			//image_pts.push_back(cv::Point2d(shape.part(54).x(), shape.part(54).y()));    // Right mouth corner
-
-
-			double focal_length = Frame.cols;
-			camera_matrix = get_camera_matrix(focal_length, cv::Point2d(Frame.cols / 2, Frame.rows / 2));
-
-
-			dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<double>::type);
-
-
-
-			//calc pose
-			cv::solvePnPRansac(object_compare_pts, image_pts, camera_matrix, dist_coeffs, rotation_vec, translation_vec);
-			//cv::solvePnP(object_compare_pts, image_pts, camera_matrix, dist_coeffs, rotation_vec, translation_vec);
-			//cv::solvePnP(object_compare_pts, image_pts, camera_matrix, dist_coeffs, rotation_vec, translation_vec, cv::SOLVEPNP_EPNP);
-			//cv::solveP3P(object_compare_pts, image_pts, camera_matrix, dist_coeffs, rotation_vec, translation_vec, cv::SOLVEPNP_EPNP);
-
-
-			//Alt1
-			//std::vector<cv::Point3d> nose_end_point3D;
-			//std::vector<cv::Point2d> nose_end_point2D;
-			//nose_end_point3D.push_back(cv::Point3d(0, 0, 1000.0));
-
-			//cv::projectPoints(nose_end_point3D, rotation_vec, translation_vec, camera_matrix, dist_coeffs, nose_end_point2D);
-			//Alt1 End
-
-			//Alt2
-			//reproject
-			cv::projectPoints(reprojectsrc, rotation_vec, translation_vec, camera_matrix, dist_coeffs, reprojectdst);
-			//Alt2 END
-			//calc euler angle
-			cv::Rodrigues(rotation_vec, rotation_mat);
-			cv::hconcat(rotation_mat, translation_vec, pose_mat);
-			cv::decomposeProjectionMatrix(pose_mat, out_intrinsics, out_rotation, out_translation, cv::noArray(), cv::noArray(), cv::noArray(), euler_angle);
-
-			image_pts.clear();
-			shapes.clear();
-			faces.clear();
-
-			HeadRotator.Pitch = -euler_angle.at<double>(0);
-			HeadRotator.Yaw = euler_angle.at<double>(1);
-			HeadRotator.Roll = -euler_angle.at<double>(2);
-
-			out_translation = rotation_mat.t() * translation_vec;
-
-			HeadLocation.X = out_translation.at<double>(0);
-			HeadLocation.Y = out_translation.at<double>(1);
-			HeadLocation.Z = out_translation.at<double>(2);
-
+			cv::circle(Frame, cv::Point(shape.part(i).x(), shape.part(i).y()), 2, cv::Scalar(0, 0, 255), 2);
 		}
 
+
+		//ProcessShapeWithKalman(shape);
+
+
+		//calc Head Info
+//			CalcHeadInfo(shape);
+
+		// Custom Face Render
+//			RenderFace(FinalFrame, shape);
+
+		//fill in 2D ref points, annotations follow https://ibug.doc.ic.ac.uk/resources/300-W/
+		//2D ref points(image coordinates), referenced from detected facial feature
+		//std::vector<cv::Point2d> image_pts;
+		image_pts.push_back(cv::Point2d(shape.part(17).x(), shape.part(17).y())); //#17 left brow left corner
+		image_pts.push_back(cv::Point2d(shape.part(21).x(), shape.part(21).y())); //#21 left brow right corner
+		image_pts.push_back(cv::Point2d(shape.part(22).x(), shape.part(22).y())); //#22 right brow left corner
+		image_pts.push_back(cv::Point2d(shape.part(26).x(), shape.part(26).y())); //#26 right brow right corner
+		image_pts.push_back(cv::Point2d(shape.part(36).x(), shape.part(36).y())); //#36 left eye left corner
+		image_pts.push_back(cv::Point2d(shape.part(39).x(), shape.part(39).y())); //#39 left eye right corner
+		image_pts.push_back(cv::Point2d(shape.part(42).x(), shape.part(42).y())); //#42 right eye left corner
+		image_pts.push_back(cv::Point2d(shape.part(45).x(), shape.part(45).y())); //#45 right eye right corner
+		image_pts.push_back(cv::Point2d(shape.part(31).x(), shape.part(31).y())); //#31 nose left corner
+		image_pts.push_back(cv::Point2d(shape.part(35).x(), shape.part(35).y())); //#35 nose right corner
+		image_pts.push_back(cv::Point2d(shape.part(48).x(), shape.part(48).y())); //#48 mouth left corner
+		image_pts.push_back(cv::Point2d(shape.part(54).x(), shape.part(54).y())); //#54 mouth right corner
+		image_pts.push_back(cv::Point2d(shape.part(57).x(), shape.part(57).y())); //#57 mouth central bottom corner
+		image_pts.push_back(cv::Point2d(shape.part(8).x(), shape.part(8).y()));   //#8 chin corner
+		//	//fill in 2D ref points, annotations follow https://ibug.doc.ic.ac.uk/resources/300-W/
+		//image_pts.push_back(cv::Point2d(shape.part(30).x(), shape.part(30).y()));    // Nose tip
+		//image_pts.push_back(cv::Point2d(shape.part(8).x(), shape.part(8).y()));      // Chin
+		//image_pts.push_back(cv::Point2d(shape.part(36).x(), shape.part(36).y()));    // Left eye left corner
+		//image_pts.push_back(cv::Point2d(shape.part(45).x(), shape.part(45).y()));    // Right eye right corner
+		//image_pts.push_back(cv::Point2d(shape.part(48).x(), shape.part(48).y()));    // Left Mouth corner
+		//image_pts.push_back(cv::Point2d(shape.part(54).x(), shape.part(54).y()));    // Right mouth corner
+
+
+		double focal_length = Frame.cols;
+		camera_matrix = get_camera_matrix(focal_length, cv::Point2d(Frame.cols / 2, Frame.rows / 2));
+
+
+		dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<double>::type);
+
+
+
+		//calc pose
+		//cv::solvePnPRansac(object_compare_pts, image_pts, camera_matrix, dist_coeffs, rotation_vec, translation_vec);
+		        cv::solvePnP(object_compare_pts, image_pts, camera_matrix, dist_coeffs, rotation_vec, translation_vec);
+		      //cv::solveP3P(object_compare_pts, image_pts, camera_matrix, dist_coeffs, rotation_vec, translation_vec);
+
+
+		//Alt1
+		//std::vector<cv::Point3d> nose_end_point3D;
+		//std::vector<cv::Point2d> nose_end_point2D;
+		//nose_end_point3D.push_back(cv::Point3d(0, 0, 1000.0));
+
+		//cv::projectPoints(nose_end_point3D, rotation_vec, translation_vec, camera_matrix, dist_coeffs, nose_end_point2D);
+		//Alt1 End
+
+		//Alt2
+		//reproject
+		//cv::projectPoints(reprojectsrc, rotation_vec, translation_vec, camera_matrix, dist_coeffs, reprojectdst);
+		//Alt2 END
+		//calc euler angle
+		cv::Rodrigues(rotation_vec, rotation_mat);
+		cv::hconcat(rotation_mat, translation_vec, pose_mat);
+		cv::decomposeProjectionMatrix(pose_mat, out_intrinsics, out_rotation, out_translation, cv::noArray(), cv::noArray(), cv::noArray(), euler_angle);
+
+		image_pts.clear();
+		shapes.clear();
+		faces.clear();
+
+		HeadRotator.Pitch = -euler_angle.at<double>(0);
+		HeadRotator.Yaw = euler_angle.at<double>(1);
+		HeadRotator.Roll = -euler_angle.at<double>(2);
+
+		out_translation = rotation_mat.t() * translation_vec;
+
+		HeadLocation.X = out_translation.at<double>(0);
+		HeadLocation.Y = out_translation.at<double>(1);
+		HeadLocation.Z = out_translation.at<double>(2);
+
 	}
+
+	
 
 }
 
