@@ -1,0 +1,2 @@
+# Default cmake cache entries for overriding the default settings
+##set(BUILD_DOCS false CACHE BOOL "")

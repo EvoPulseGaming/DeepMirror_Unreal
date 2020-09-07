@@ -1,5 +1,5 @@
 @ECHO OFF
-set opencv_ver=3.4.4
+set opencv_ver=4.4.0
 set opencv_url=https://github.com/opencv/opencv/archive/%opencv_ver%.zip
 set opencv_src=opencv-%opencv_ver%
 
@@ -61,13 +61,17 @@ md %bin_path%\Win64
 md %lib_path%\Win32
 md %lib_path%\Win64
 
+::Copy to plugin dir
+md ..\..\..\Libraries\Win32
+md ..\..\..\Libraries\Win64
+
 move /y x86\vc15\bin\*.* %bin_path%\Win32
 move /y x64\vc15\bin\*.* %bin_path%\Win64
-move /y x86\vc15\lib\*.lib %lib_path%\Win32
-move /y x64\vc15\lib\*.lib %lib_path%\Win64
+move /y x86\vc15\lib\*.lib ..\..\..\Libraries\Win32
+move /y x64\vc15\lib\*.lib ..\..\..\Libraries\Win64
 
-#rd /s /q x86
-#rd /s /q x64
-#del /f OpenCV*.cmake
+rd /s /q x86
+rd /s /q x64
+del /f OpenCV*.cmake
 
-echo Done. Remember to delete the build directory and submit changed files to p4
+echo Done. Libs are in %lib_path%, Bins are in %bin_path%

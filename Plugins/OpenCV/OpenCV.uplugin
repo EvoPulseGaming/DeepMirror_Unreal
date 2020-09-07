@@ -5,7 +5,7 @@
 	"FriendlyName" : "OpenCV",
 	"Description" : "Plugin to handle using OpenCV.",
 	"Category" : "Compositing",
-	"CreatedBy" : "Epic Games, Inc.",
+	"CreatedBy" : "Epic Games, Inc. (EvoPulseGaming : Reworked into its own plugin, and modified for easy updating)" ,
 	"CreatedByURL" : "",
 	"DocsURL" : "",
 	"MarketplaceURL" : "",

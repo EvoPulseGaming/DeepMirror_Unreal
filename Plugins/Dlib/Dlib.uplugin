@@ -1,24 +1,30 @@
 {
-	"FileVersion": 3,
-	"Version": 1,
-	"VersionName": "1.0",
-	"FriendlyName": "Dlib",
-	"Description": "Dlib Plugin",
-	"Category": "Other",
-	"CreatedBy": "Tong",
-	"CreatedByURL": "",
-	"DocsURL": "",
-	"MarketplaceURL": "",
-	"SupportURL": "",
-	"CanContainContent": true,
-	"IsBetaVersion": false,
-	"IsExperimentalVersion": false,
-	"Installed": false,
-	"Modules": [
-		{
-			"Name": "Dlib",
-			"Type": "Runtime",
-			"LoadingPhase": "Default"
-		}
+	"FileVersion" : 3,
+	"Version" : 1,
+	"VersionName" : "1.0",
+	"FriendlyName" : "Dlib",
+	"Description" : "Plugin to handle using Dlib.",
+	"Category" : "Compositing",
+	"CreatedBy" : "Epic Games, Inc. (EvoPulseGaming : Reworked OpenCV plugin to Dlib)",
+	"CreatedByURL" : "",
+	"DocsURL" : "",
+	"MarketplaceURL" : "",
+	"SupportURL" : "",
+	"EnabledByDefault" : false,
+	"CanContainContent" : true,
+	"IsBetaVersion" : true,
+	"Installed" : false,
+	"Modules" :
+	[
+    {
+      "Name": "DlibHelper",
+      "Type": "Runtime",
+      "LoadingPhase": "PostConfigInit",
+      "WhitelistPlatforms": [
+        "Win64",
+        "Win32",
+        "Linux"
+      ]
+    }
 	]
 }
