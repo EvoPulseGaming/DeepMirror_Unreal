@@ -27,9 +27,9 @@ void FDlibHelperModule::StartupModule()
 {
 	const FString PluginDir = IPluginManager::Get().FindPlugin(TEXT("Dlib"))->GetBaseDir();
 
-#if WITH_OPENCV
-	const FString DlibBinPath = PluginDir / TEXT(PREPROCESSOR_TO_STRING(OPENCV_PLATFORM_PATH));
-	const FString DLLPath = DlibBinPath / TEXT(PREPROCESSOR_TO_STRING(OPENCV_DLL_NAME));
+#if WITH_DLIB
+	const FString DlibBinPath = PluginDir / TEXT(PREPROCESSOR_TO_STRING(DLIB_PLATFORM_PATH));
+	const FString DLLPath = DlibBinPath / TEXT(PREPROCESSOR_TO_STRING(DLIB_DLL_NAME));
 
 	FPlatformProcess::PushDllDirectory(*DlibBinPath);
 	DlibDllHandle = FPlatformProcess::GetDllHandle(*DLLPath);
@@ -39,7 +39,7 @@ void FDlibHelperModule::StartupModule()
 
 void FDlibHelperModule::ShutdownModule()
 {
-#if WITH_OPENCV
+#if WITH_DLIB
 	if (DlibDllHandle)
 	{
 		FPlatformProcess::FreeDllHandle(DlibDllHandle);
