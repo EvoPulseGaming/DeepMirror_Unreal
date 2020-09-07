@@ -50,3 +50,12 @@ Plugins/OpenCV/Source/ThirdParty/OpenCV/build/x86/**
 Plugins/OpenCV/Source/ThirdParty/OpenCV/include/**
 Plugins/OpenCV/Source/ThirdParty/OpenCV/lib/**
 Plugins/OpenCV/Source/ThirdParty/OpenCV/etc/**
+Plugins/OpenCV/Libraries/**
+
+Plugins/Dlib/Source/ThirdParty/Dlib/build/dlib-*/**
+Plugins/Dlib/Source/ThirdParty/Dlib/build/x64/**
+Plugins/Dlib/Source/ThirdParty/Dlib/build/x86/**
+Plugins/Dlib/Source/ThirdParty/Dlib/include/**
+Plugins/Dlib/Source/ThirdParty/Dlib/lib/**
+Plugins/Dlib/Source/ThirdParty/Dlib/etc/**
+Plugins/Dlib/Libraries/**
