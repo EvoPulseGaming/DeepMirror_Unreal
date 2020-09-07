@@ -44,3 +44,9 @@ Saved/**
 
 Binaries/*
 
+Plugins/OpenCV/Source/ThirdParty/OpenCV/build/opencv-*/**
+Plugins/OpenCV/Source/ThirdParty/OpenCV/build/x64/**
+Plugins/OpenCV/Source/ThirdParty/OpenCV/build/x86/**
+Plugins/OpenCV/Source/ThirdParty/OpenCV/include/**
+Plugins/OpenCV/Source/ThirdParty/OpenCV/lib/**
+Plugins/OpenCV/Source/ThirdParty/OpenCV/etc/**

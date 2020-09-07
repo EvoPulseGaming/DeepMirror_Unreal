@@ -2,6 +2,10 @@
 #include "TimerManager.h"
 #include "Engine/Texture2D.h"
 #include "OpenCV_Common.h"
+#include "DeepMirrorPlugin.h"
+#include "GenericPlatform/GenericPlatformMisc.h"
+#include "Misc/FileHelper.h"
+#include "HAL/PlatformFilemanager.h"
 
 #define DETECT_BUFFER_SIZE 0x20000
 
@@ -31,6 +35,9 @@ AWebcamActor::~AWebcamActor()
 	}
 }
 
+
+
+
 void AWebcamActor::BeginPlay()
 {
 	Super::BeginPlay();
@@ -53,7 +60,41 @@ void AWebcamActor::BeginPlay()
 
 
 
+		//FString deploypath = FPaths::ProjectPluginsDir()+"/DeepMirrorPlugin/Source/caffeemodels/deploy.prototxt";
+		//FString caffemodelpath = FPaths::ProjectPluginsDir() + "/DeepMirrorPlugin/Source/caffeemodels/res10_300x300_ssd_iter_140000_fp16.caffemodel";
+		FString deploypath = FString::Printf(TEXT("S:/GitHub/DeepMirror_Unreal/Plugins/DeepMirrorPlugin/Source/caffeemodels/deploy.prototxt"));
+		FString caffemodelpath = FString::Printf(TEXT("S:/GitHub/DeepMirror_Unreal/Plugins/DeepMirrorPlugin/Source/caffeemodels/res10_300x300_ssd_iter_140000_fp16.caffemodel"));
 
+
+		FString RootOpenCVPath = FPaths::ProjectPluginsDir() / FString::Printf(TEXT("DeepMirrorPlugin/Source/caffeemodels/"));
+		FString Filename = FString::Printf(TEXT("res10_300x300_ssd_iter_140000_fp16.caffemodel.dll"));
+		FString Filename2 = FString::Printf(TEXT("deploy.prototxt"));
+
+		FString LibraryPath = FPaths::Combine(*RootOpenCVPath, Filename);
+
+		FString LibraryPath2 = FPaths::Combine(*RootOpenCVPath, Filename);
+		//std::string deploypath_string = std::string(TCHAR_TO_UTF8(*deploypath));
+		//std::string caffemodelpath_string = std::string(TCHAR_TO_UTF8(*caffemodelpath));
+
+
+		//UE_LOG(LogTemp, Warning, TEXT("JSON %s"), *FString(deploypath_string.c_str()));
+		//UE_LOG(LogTemp, Warning, TEXT("JSON %s"), *FString(caffemodelpath_string.c_str()));
+
+
+		//#ifdef CAFFE
+		//std::string deploypath_string = "S:/GitHub/DeepMirror_Unreal/Plugins/DeepMirrorPlugin/Source/caffeemodels/deploy.prototxt";
+		//std::string caffemodelpath_string = "S:/GitHub/DeepMirror_Unreal/Plugins/DeepMirrorPlugin/Source/caffeemodels/res10_300x300_ssd_iter_140000_fp16.caffemodel";
+
+		std::string proto = "S:/GitHub/DeepMirror_Unreal/Plugins/DeepMirrorPlugin/Source/caffeemodels/deploy.prototxt";
+		std::string caffe = "S:/GitHub/DeepMirror_Unreal/Plugins/DeepMirrorPlugin/Source/caffeemodels/res10_300x300_ssd_iter_140000_fp16.caffemodel";
+
+
+
+		//cv::dnn::Net net2 = cv::dnn::readNetFromCaffe(deploypath_string, caffemodelpath_string);
+		cv::dnn::Net net3 = cv::dnn::readNetFromCaffe(proto, caffe);
+		//#else
+		//	cv::Net net = cv::dnn::readNetFromTensorflow(tensorflowWeightFile, tensorflowConfigFile);
+		//#endif
 
 
 		SKIP_FRAMES = 2;

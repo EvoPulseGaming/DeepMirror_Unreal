@@ -1,0 +1,12 @@
+Install CMAKE to computer
+
+Open build.bat
+
+modify 
+set opencv_ver=X.X.X 
+to your new version (has to be a version available on the github link inside build.bat
+
+run build.bat (in cmd prompt so you can see if there are any errors)
+
+
+copy openCV binaries and pdb's if needed

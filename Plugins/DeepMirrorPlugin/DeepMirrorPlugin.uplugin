@@ -23,7 +23,7 @@
   ],
   "Plugins": [
     {
-      "Name": "OpenCVLensDistortion",
+      "Name": "OpenCV",
       "Enabled": true
     },
     {
