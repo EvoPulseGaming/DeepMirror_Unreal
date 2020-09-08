@@ -80,7 +80,6 @@ protected:
 	int UpdateCount;
 
 	cv::Mat Frame;
-	cv::Mat* GrayFrame;
 	cv::VideoCapture* Webcam;
 	cv::Size* Size;
 	dlib::frontal_face_detector detector;

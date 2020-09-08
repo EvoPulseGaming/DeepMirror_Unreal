@@ -17,8 +17,6 @@ AWebcamActor::AWebcamActor()
 	RefreshTime = 1000000.0f;
 	bDebugFaceLandmarks = true;
 	VideoSize = FVector2D(0, 0);
-	//Frame = new cv::Mat();
-	GrayFrame = new cv::Mat();
 	Webcam = new cv::VideoCapture();
 
 }
@@ -27,8 +25,6 @@ AWebcamActor::~AWebcamActor()
 {
 	if (!bMemoryReleased)
 	{
-		//FMemory::Free(Frame);
-		FMemory::Free(GrayFrame);
 		FMemory::Free(Size);
 		FMemory::Free(Webcam);
 	}
@@ -56,11 +52,6 @@ void AWebcamActor::BeginPlay()
 
 		CameraData.Init(FColor(0, 0, 0, 255), VideoSize.X * VideoSize.Y);
 
-
-
-
-		//FString deploypath = FPaths::ProjectPluginsDir()+"/DeepMirrorPlugin/Source/caffeemodels/deploy.prototxt";
-		//FString caffemodelpath = FPaths::ProjectPluginsDir() + "/DeepMirrorPlugin/Source/caffeemodels/res10_300x300_ssd_iter_140000_fp16.caffemodel";
 		FString deploypath = FString::Printf(TEXT("S:/GitHub/DeepMirror_Unreal/Plugins/DeepMirrorPlugin/Source/caffeemodels/deploy.prototxt"));
 		FString caffemodelpath = FString::Printf(TEXT("S:/GitHub/DeepMirror_Unreal/Plugins/DeepMirrorPlugin/Source/caffeemodels/res10_300x300_ssd_iter_140000_fp16.caffemodel"));
 
@@ -85,13 +76,6 @@ void AWebcamActor::BeginPlay()
 
 
 		UpdateCount = 0;
-
-
-		//Load face detection and pose estimation models (dlib).
-		detector = dlib::get_frontal_face_detector();
-
-		//dlib::deserialize("shape_predictor_68_face_landmarks.dat") >> pose_model_shape_predictor;
-
 
 		FString ShapePath = FPaths::Combine(FPaths::ProjectContentDir(), TEXT("TestRes/shape_predictor_68_face_landmarks.dat"));
 
@@ -146,26 +130,26 @@ void AWebcamActor::BeginPlay()
 	
 
 
-		//Init kalman
-		for (int i = 0; i < 68; i++)
-		{
-			cv::KalmanFilter KF = cv::KalmanFilter(stateNum, measureNum, 0);
-			cv::Mat measurement = cv::Mat::zeros(measureNum, 1, CV_32F);
-			//A ??????
-			KF.transitionMatrix = (cv::Mat_<float>(stateNum, stateNum) << 1, 0, 1, 0,
-				0, 1, 0, 1,
-				0, 0, 1, 0,
-				0, 0, 0, 1);
-			//??????????B?????
-			setIdentity(KF.measurementMatrix);//H=[1,0,0,0;0,1,0,0] ????
-			setIdentity(KF.processNoiseCov, cv::Scalar::all(1e-5));//Q?????????
-			setIdentity(KF.measurementNoiseCov, cv::Scalar::all(1e-1));//R?????????
-			setIdentity(KF.errorCovPost, cv::Scalar::all(1));//P???????????????????
-			randn(KF.statePost, cv::Scalar::all(0), cv::Scalar::all(0.1));//?????????
-			KFs[i] = KF;
-			measurements[i] = measurement;
+		////Init kalman
+		//for (int i = 0; i < 68; i++)
+		//{
+		//	cv::KalmanFilter KF = cv::KalmanFilter(stateNum, measureNum, 0);
+		//	cv::Mat measurement = cv::Mat::zeros(measureNum, 1, CV_32F);
+		//	//A ??????
+		//	KF.transitionMatrix = (cv::Mat_<float>(stateNum, stateNum) << 1, 0, 1, 0,
+		//		0, 1, 0, 1,
+		//		0, 0, 1, 0,
+		//		0, 0, 0, 1);
+		//	//??????????B?????
+		//	setIdentity(KF.measurementMatrix);//H=[1,0,0,0;0,1,0,0] ????
+		//	setIdentity(KF.processNoiseCov, cv::Scalar::all(1e-5));//Q?????????
+		//	setIdentity(KF.measurementNoiseCov, cv::Scalar::all(1e-1));//R?????????
+		//	setIdentity(KF.errorCovPost, cv::Scalar::all(1));//P???????????????????
+		//	randn(KF.statePost, cv::Scalar::all(0), cv::Scalar::all(0.1));//?????????
+		//	KFs[i] = KF;
+		//	measurements[i] = measurement;
 
-		}
+		//}
 
 
 
@@ -181,7 +165,7 @@ void AWebcamActor::BeginPlay()
 		UE_LOG(LogTemp, Error, TEXT("Camera error, stream wont open"))
 	}
 
-	GetWorldTimerManager().SetTimer(timerHandle, this, &AWebcamActor::CameraTimerTick, 0.08f, true);
+	GetWorldTimerManager().SetTimer(timerHandle, this, &AWebcamActor::CameraTimerTick, 0.08f, true, 3);
 
 }
 
@@ -198,6 +182,9 @@ void AWebcamActor::CameraTimerTick()
 		RefreshTime -= 1.f / RefreshFPS;
 		UpdateFrame();
 		UpdateTexture();
+		ComputeHeadDataTick();
+		//Technically you should call ComputeHeadDataTick here, not manually in blueprints on timer
+		//But manually allows us to run at a slower tick so we don't bog down the app while experimenting
 	}
 }
 
@@ -206,10 +193,6 @@ void AWebcamActor::UpdateFrame()
 	if (bCamOpen)
 	{
 		Webcam->read(Frame);
-		cv::cvtColor(Frame, *GrayFrame, cv::COLOR_BGR2GRAY);
-		//ComputeHeadDataTick();
-		//Technically you should call ComputeHeadDataTick here, not manually in blueprints on timer
-		//But manually allows us to run at a slower tick so we don't bog down the app
 	}
 }
 
@@ -294,19 +277,6 @@ static dlib::rectangle openCVRectToDlib(cv::Rect r)
 void AWebcamActor::ComputeHeadDataTick()
 {
 
-	// Grab a frame
-	//*Webcam >> temp;
-
-
-
-
-
-
-
-
-
-	//detector = dlib::get_frontal_face_detector();
-
 	if (Frame.empty() && !Frame.data)
 		return;
 
@@ -315,38 +285,11 @@ void AWebcamActor::ComputeHeadDataTick()
 		cv::cvtColor(Frame, Frame, cv::COLOR_BGRA2BGR);
 	}
 
-
-	//cv::resize(Frame, smallMat, cv::Size(), 1.0 / FACE_DOWNSAMPLE_RATIO, 1.0 / FACE_DOWNSAMPLE_RATIO);
-	//dlib::cv_image<dlib::bgr_pixel> cimg(Frame);
-	//dlib::cv_image<dlib::bgr_pixel> cimg_small(smallMat);
-	////Detect faces   
-	//if (UpdateCount++ % SKIP_FRAMES == 0) {	//skip X frames between detection
-	//	faces = detector(cimg_small);
-	//	if (faces.size() == 0)
-	//	{
-	//		UE_LOG(LogTemp, Error, TEXT("No face detected from cimg_small"));
-	//		return;
-	//	}
-	//}
-	//else
-	//{
-	//	return;
-	//}
-
-
 	float inScaleFactor = 1;
 	float meanVal = 1;
 
+	  cv::Mat inputBlob = cv::dnn::blobFromImage(  Frame, inScaleFactor, cv::Size(         400,          300), meanVal, false, false);
 
-
-	//ifdef CAFFE
-	cv::Mat inputBlob = cv::dnn::blobFromImage(Frame, inScaleFactor, cv::Size(Frame.cols, Frame.rows), meanVal, false, false);
-	//cv::Mat resized;
-	//cv::resize(Frame, resized, cv::Size(300, 300));
-	//cv::Mat inputBlob = cv::dnn::blobFromImage(resized, 1.0, cv::Size(300, 300)); //model is uint8 has no need to normalize.
-	//#else
-	//	cv::Mat inputBlob = cv::dnn::blobFromImage(frameOpenCVDNN, inScaleFactor, cv::Size(inWidth, inHeight), meanVal, true, false);
-	//#endif
 
 	net.setInput(inputBlob, "data");
 	cv::Mat detection = net.forward("detection_out");
@@ -512,8 +455,6 @@ void AWebcamActor::EndPlay(EEndPlayReason::Type reasonType)
 		bCamOpen = false;
 	}
 
-	//FMemory::Free(Frame);
-	FMemory::Free(GrayFrame);
 	FMemory::Free(Webcam);
 
 	bMemoryReleased = true;
