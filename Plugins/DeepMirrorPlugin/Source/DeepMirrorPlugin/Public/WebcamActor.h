@@ -67,23 +67,28 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-	//Intrisics can be calculated using opencv sample code under opencv/sources/samples/cpp/tutorial_code/calib3d
-	//Normally, you can also apprximate fx and fy by image width, cx by half image width, cy by half image height instead
-	double K[9] = { 6.5308391993466671e+002, 0.0, 3.1950000000000000e+002, 0.0, 6.5308391993466671e+002, 2.3950000000000000e+002, 0.0, 0.0, 1.0 };
-	double D[5] = { 7.0834633684407095e-002, 6.9140193737175351e-002, 0.0, 0.0, -1.3073460323689292e+000 };
-	//fill in cam intrinsics and distortion coefficients
-	cv::Mat camera_matrix = cv::Mat(3, 3, CV_64FC1, K);
 
-	cv::Mat dist_coeffs = cv::Mat(5, 1, CV_64FC1, D);
 
 
 	int UpdateCount;
-
+	std::ifstream StreamIn;
+	cv::KalmanFilter KF = cv::KalmanFilter(stateNum, measureNum, 0);
+	cv::Mat measurement = cv::Mat::zeros(measureNum, 1, CV_32F);
 	cv::Mat Frame;
 	cv::VideoCapture* Webcam;
 	cv::Size* Size;
 	dlib::frontal_face_detector detector;
 	dlib::shape_predictor pose_model_shape_predictor;
+
+	cv::Mat inputBlob;
+
+	cv::Mat detection;
+	cv::Mat detectionMat;
+	dlib::rectangle r;
+
+
+
+
 	//fill in 3D ref points(world coordinates), model referenced from http://aifi.isr.uc.pt/Downloads/OpenGL/glAnthropometric3DModel.cpp
 	std::vector<cv::Point3d> object_compare_pts;
 
@@ -97,11 +102,20 @@ protected:
 	cv::dnn::Net net;
 	std::vector<dlib::full_object_detection> shapes;
 	dlib::full_object_detection shape;
-	std::vector<dlib::rectangle> faces;
+	//std::vector<dlib::rectangle> faces;
 
-	cv::Mat rotation_vec; //3 x 1
+	double focal_length;
+	cv::Point2d center;
+	cv::Mat camera_matrix;
+	cv::Mat dist_coeffs;
+	cv::Mat rotation_vector; // Rotation in axis-angle form
+	cv::Mat translation_vector;
+	std::vector<cv::Point3d> nose_end_point3D;
+	std::vector<cv::Point2d> nose_end_point2D;
+
+	//cv::Mat rotation_vec; //3 x 1
 	cv::Mat rotation_mat;//3 x 3 R
-	cv::Mat translation_vec;//3 x 1 T
+	//cv::Mat translation_vec;//3 x 1 T
 
 	//cv::Mat temp;
 	cv::Mat smallMat;
@@ -123,6 +137,7 @@ protected:
 
 	FTimerHandle timerHandle;
 	FUpdateTextureRegion2D* VideoUpdateTextureRegion;
+	std::vector<double> rot_mat_to_eular(cv::Mat rotation_vec);
 
 	void UpdateTextureRegions(UTexture2D* Texture, int32 MipIndex, uint32 NumRegions, FUpdateTextureRegion2D* Regions, uint32 SrcPitch, uint32 SrcBpp, uint8* SrcData, bool bFreeData);
 	void UpdateFrame();
