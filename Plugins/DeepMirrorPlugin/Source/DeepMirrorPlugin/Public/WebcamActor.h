@@ -61,6 +61,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Dlib|DetectFacePose")
 		void ComputeHeadDataTick();
 
+
 	virtual void EndPlay(EEndPlayReason::Type reasonType) override;
 
 protected:
@@ -94,6 +95,7 @@ protected:
 	//reproject 3D points world coordinate axis to verify result pose
 	std::vector<cv::Point3d> reprojectsrc;
 
+	cv::dnn::Net net;
 	std::vector<dlib::full_object_detection> shapes;
 	dlib::full_object_detection shape;
 	std::vector<dlib::rectangle> faces;

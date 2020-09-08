@@ -61,6 +61,7 @@ public class DeepMirrorPlugin : ModuleRules
 				"OpenCV",
 				"OpenCVHelper",
 				"Dlib",
+				"DlibHelper",
 			}
 			);
 			
@@ -75,6 +76,7 @@ public class DeepMirrorPlugin : ModuleRules
 				"OpenCV",
 				"OpenCVHelper",
 				"Dlib",
+				"DlibHelper",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
@@ -85,6 +87,7 @@ public class DeepMirrorPlugin : ModuleRules
 				"OpenCV",
 				"OpenCVHelper",
 				"Dlib",
+				"DlibHelper",
 			});
 
 		DynamicallyLoadedModuleNames.AddRange(

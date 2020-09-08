@@ -1,11 +1,10 @@
 #include "WebcamActor.h"
 #include "TimerManager.h"
 #include "Engine/Texture2D.h"
-#include "OpenCV_Common.h"
+
 #include "DeepMirrorPlugin.h"
-#include "GenericPlatform/GenericPlatformMisc.h"
-#include "Misc/FileHelper.h"
-#include "HAL/PlatformFilemanager.h"
+
+#include "OpenCV_Common.h"
 
 #define DETECT_BUFFER_SIZE 0x20000
 
@@ -66,35 +65,19 @@ void AWebcamActor::BeginPlay()
 		FString caffemodelpath = FString::Printf(TEXT("S:/GitHub/DeepMirror_Unreal/Plugins/DeepMirrorPlugin/Source/caffeemodels/res10_300x300_ssd_iter_140000_fp16.caffemodel"));
 
 
-		FString RootOpenCVPath = FPaths::ProjectPluginsDir() / FString::Printf(TEXT("DeepMirrorPlugin/Source/caffeemodels/"));
-		FString Filename = FString::Printf(TEXT("res10_300x300_ssd_iter_140000_fp16.caffemodel.dll"));
-		FString Filename2 = FString::Printf(TEXT("deploy.prototxt"));
-
-		FString LibraryPath = FPaths::Combine(*RootOpenCVPath, Filename);
-
-		FString LibraryPath2 = FPaths::Combine(*RootOpenCVPath, Filename);
-		//std::string deploypath_string = std::string(TCHAR_TO_UTF8(*deploypath));
-		//std::string caffemodelpath_string = std::string(TCHAR_TO_UTF8(*caffemodelpath));
-
-
-		//UE_LOG(LogTemp, Warning, TEXT("JSON %s"), *FString(deploypath_string.c_str()));
-		//UE_LOG(LogTemp, Warning, TEXT("JSON %s"), *FString(caffemodelpath_string.c_str()));
-
-
-		//#ifdef CAFFE
-		//std::string deploypath_string = "S:/GitHub/DeepMirror_Unreal/Plugins/DeepMirrorPlugin/Source/caffeemodels/deploy.prototxt";
-		//std::string caffemodelpath_string = "S:/GitHub/DeepMirror_Unreal/Plugins/DeepMirrorPlugin/Source/caffeemodels/res10_300x300_ssd_iter_140000_fp16.caffemodel";
-
 		std::string proto = "S:/GitHub/DeepMirror_Unreal/Plugins/DeepMirrorPlugin/Source/caffeemodels/deploy.prototxt";
 		std::string caffe = "S:/GitHub/DeepMirror_Unreal/Plugins/DeepMirrorPlugin/Source/caffeemodels/res10_300x300_ssd_iter_140000_fp16.caffemodel";
 
 
 
-		//cv::dnn::Net net2 = cv::dnn::readNetFromCaffe(deploypath_string, caffemodelpath_string);
-		cv::dnn::Net net3 = cv::dnn::readNetFromCaffe(proto, caffe);
-		//#else
-		//	cv::Net net = cv::dnn::readNetFromTensorflow(tensorflowWeightFile, tensorflowConfigFile);
-		//#endif
+		net = cv::dnn::readNetFromCaffe(proto, caffe);
+		if (net.empty())
+		{
+			std::cerr << "Can't load network by using the following files: " << std::endl;
+			std::cerr << "prototxt:   " << proto << std::endl;
+			std::cerr << "caffemodel: " << caffe << std::endl;
+			exit(-1);
+		}
 
 
 		SKIP_FRAMES = 2;
@@ -224,7 +207,7 @@ void AWebcamActor::UpdateFrame()
 	{
 		Webcam->read(Frame);
 		cv::cvtColor(Frame, *GrayFrame, cv::COLOR_BGR2GRAY);
-		ComputeHeadDataTick();
+		//ComputeHeadDataTick();
 		//Technically you should call ComputeHeadDataTick here, not manually in blueprints on timer
 		//But manually allows us to run at a slower tick so we don't bog down the app
 	}
@@ -327,119 +310,142 @@ void AWebcamActor::ComputeHeadDataTick()
 	if (Frame.empty() && !Frame.data)
 		return;
 
+	if (Frame.channels() == 4)
+	{
+		cv::cvtColor(Frame, Frame, cv::COLOR_BGRA2BGR);
+	}
 
-	cv::resize(Frame, smallMat, cv::Size(), 1.0 / FACE_DOWNSAMPLE_RATIO, 1.0 / FACE_DOWNSAMPLE_RATIO);
+
+	//cv::resize(Frame, smallMat, cv::Size(), 1.0 / FACE_DOWNSAMPLE_RATIO, 1.0 / FACE_DOWNSAMPLE_RATIO);
+	//dlib::cv_image<dlib::bgr_pixel> cimg(Frame);
+	//dlib::cv_image<dlib::bgr_pixel> cimg_small(smallMat);
+	////Detect faces   
+	//if (UpdateCount++ % SKIP_FRAMES == 0) {	//skip X frames between detection
+	//	faces = detector(cimg_small);
+	//	if (faces.size() == 0)
+	//	{
+	//		UE_LOG(LogTemp, Error, TEXT("No face detected from cimg_small"));
+	//		return;
+	//	}
+	//}
+	//else
+	//{
+	//	return;
+	//}
+
+
+	float inScaleFactor = 1;
+	float meanVal = 1;
+
+
+
+	//ifdef CAFFE
+	cv::Mat inputBlob = cv::dnn::blobFromImage(Frame, inScaleFactor, cv::Size(Frame.cols, Frame.rows), meanVal, false, false);
+	//cv::Mat resized;
+	//cv::resize(Frame, resized, cv::Size(300, 300));
+	//cv::Mat inputBlob = cv::dnn::blobFromImage(resized, 1.0, cv::Size(300, 300)); //model is uint8 has no need to normalize.
+	//#else
+	//	cv::Mat inputBlob = cv::dnn::blobFromImage(frameOpenCVDNN, inScaleFactor, cv::Size(inWidth, inHeight), meanVal, true, false);
+	//#endif
+
+	net.setInput(inputBlob, "data");
+	cv::Mat detection = net.forward("detection_out");
+
+	cv::Mat detectionMat(detection.size[2], detection.size[3], CV_32F, detection.ptr<float>());
+
+
+		cv::resize(Frame, smallMat, cv::Size(), 1.0 / FACE_DOWNSAMPLE_RATIO, 1.0 / FACE_DOWNSAMPLE_RATIO);
 	dlib::cv_image<dlib::bgr_pixel> cimg(Frame);
 	dlib::cv_image<dlib::bgr_pixel> cimg_small(smallMat);
-	//Detect faces   
-	if (UpdateCount++ % SKIP_FRAMES == 0) {	//skip X frames between detection
-		faces = detector(cimg_small);
-		if (faces.size() == 0)
-		{
-			UE_LOG(LogTemp, Error, TEXT("No face detected from cimg_small"));
-			return;
-		}
-	}
-	else
+
+
+	for (int i = 0; i < detectionMat.rows; i++)
 	{
-		return;
-	}
-
-
-
-
-
-
-
-
-
-
-//	dlib::cv_image<dlib::bgr_pixel> cimg(temp);
-
-// Detect faces
-//	std::vector<dlib::rectangle> faces = detector(cimg);
-
-// Find the pose of each face
-
-	for (unsigned long i = 0; i < faces.size(); ++i) {
-		dlib::rectangle r(
-			(long)(faces[i].left()*FACE_DOWNSAMPLE_RATIO),
-			(long)(faces[i].top()*FACE_DOWNSAMPLE_RATIO),
-			(long)(faces[i].right()*FACE_DOWNSAMPLE_RATIO),
-			(long)(faces[i].bottom()*FACE_DOWNSAMPLE_RATIO)
-		);
-
-
-
-		// Landmark detection on full sized image
-		shape = pose_model_shape_predictor(cimg, r);
-		shapes.push_back(shape);
-
-
-
-
-		//Render square around face
-		cv::rectangle(Frame, dlibRectangleToOpenCV(r), (1,0,1),5);
-
-
-
-			
-
-		//draw features
-		for (unsigned int i = 0; i < 68; ++i)
+		float confidence = detectionMat.at<float>(i, 2);
+		float confidenceThreshold = 0.5f;
+		if (confidence > confidenceThreshold)
 		{
+			int x1 = static_cast<int>(detectionMat.at<float>(i, 3) * Frame.cols);
+			int y1 = static_cast<int>(detectionMat.at<float>(i, 4) * Frame.rows);
+			int x2 = static_cast<int>(detectionMat.at<float>(i, 5) * Frame.cols);
+			int y2 = static_cast<int>(detectionMat.at<float>(i, 6) * Frame.rows);
 
-			cv::circle(Frame, cv::Point(shape.part(i).x(), shape.part(i).y()), 2, cv::Scalar(0, 0, 255), 2);
-		}
+			cv::rectangle(Frame, cv::Point(x1, y1), cv::Point(x2, y2), cv::Scalar(0, 255, 0), 2, 4);
+			dlib::rectangle r(
+				static_cast<int>(detectionMat.at<float>(i, 3) * Frame.cols),
+				static_cast<int>(detectionMat.at<float>(i, 4) * Frame.rows),
+				static_cast<int>(detectionMat.at<float>(i, 5) * Frame.cols),
+				static_cast<int>(detectionMat.at<float>(i, 6) * Frame.rows)
+			);
 
-
-		//ProcessShapeWithKalman(shape);
-
-
-		//calc Head Info
-//			CalcHeadInfo(shape);
-
-		// Custom Face Render
-//			RenderFace(FinalFrame, shape);
-
-		//fill in 2D ref points, annotations follow https://ibug.doc.ic.ac.uk/resources/300-W/
-		//2D ref points(image coordinates), referenced from detected facial feature
-		//std::vector<cv::Point2d> image_pts;
-		image_pts.push_back(cv::Point2d(shape.part(17).x(), shape.part(17).y())); //#17 left brow left corner
-		image_pts.push_back(cv::Point2d(shape.part(21).x(), shape.part(21).y())); //#21 left brow right corner
-		image_pts.push_back(cv::Point2d(shape.part(22).x(), shape.part(22).y())); //#22 right brow left corner
-		image_pts.push_back(cv::Point2d(shape.part(26).x(), shape.part(26).y())); //#26 right brow right corner
-		image_pts.push_back(cv::Point2d(shape.part(36).x(), shape.part(36).y())); //#36 left eye left corner
-		image_pts.push_back(cv::Point2d(shape.part(39).x(), shape.part(39).y())); //#39 left eye right corner
-		image_pts.push_back(cv::Point2d(shape.part(42).x(), shape.part(42).y())); //#42 right eye left corner
-		image_pts.push_back(cv::Point2d(shape.part(45).x(), shape.part(45).y())); //#45 right eye right corner
-		image_pts.push_back(cv::Point2d(shape.part(31).x(), shape.part(31).y())); //#31 nose left corner
-		image_pts.push_back(cv::Point2d(shape.part(35).x(), shape.part(35).y())); //#35 nose right corner
-		image_pts.push_back(cv::Point2d(shape.part(48).x(), shape.part(48).y())); //#48 mouth left corner
-		image_pts.push_back(cv::Point2d(shape.part(54).x(), shape.part(54).y())); //#54 mouth right corner
-		image_pts.push_back(cv::Point2d(shape.part(57).x(), shape.part(57).y())); //#57 mouth central bottom corner
-		image_pts.push_back(cv::Point2d(shape.part(8).x(), shape.part(8).y()));   //#8 chin corner
-		//	//fill in 2D ref points, annotations follow https://ibug.doc.ic.ac.uk/resources/300-W/
-		//image_pts.push_back(cv::Point2d(shape.part(30).x(), shape.part(30).y()));    // Nose tip
-		//image_pts.push_back(cv::Point2d(shape.part(8).x(), shape.part(8).y()));      // Chin
-		//image_pts.push_back(cv::Point2d(shape.part(36).x(), shape.part(36).y()));    // Left eye left corner
-		//image_pts.push_back(cv::Point2d(shape.part(45).x(), shape.part(45).y()));    // Right eye right corner
-		//image_pts.push_back(cv::Point2d(shape.part(48).x(), shape.part(48).y()));    // Left Mouth corner
-		//image_pts.push_back(cv::Point2d(shape.part(54).x(), shape.part(54).y()));    // Right mouth corner
-
-
-		double focal_length = Frame.cols;
-		camera_matrix = get_camera_matrix(focal_length, cv::Point2d(Frame.cols / 2, Frame.rows / 2));
-
-
-		dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<double>::type);
+			shape = pose_model_shape_predictor(cimg, r);
+			shapes.push_back(shape);
 
 
 
-		//calc pose
-		//cv::solvePnPRansac(object_compare_pts, image_pts, camera_matrix, dist_coeffs, rotation_vec, translation_vec);
-		        cv::solvePnP(object_compare_pts, image_pts, camera_matrix, dist_coeffs, rotation_vec, translation_vec);
-		      //cv::solveP3P(object_compare_pts, image_pts, camera_matrix, dist_coeffs, rotation_vec, translation_vec);
+
+			//Render square around face
+			//cv::rectangle(Frame, dlibRectangleToOpenCV(r), (1,0,1),5);
+
+
+
+
+
+			//draw features
+			for (unsigned int i = 0; i < 68; ++i)
+			{
+
+				cv::circle(Frame, cv::Point(shape.part(i).x(), shape.part(i).y()), 2, cv::Scalar(0, 0, 255), 2);
+			}
+
+
+			//ProcessShapeWithKalman(shape);
+
+
+			//calc Head Info
+	//			CalcHeadInfo(shape);
+
+			// Custom Face Render
+	//			RenderFace(FinalFrame, shape);
+
+			//fill in 2D ref points, annotations follow https://ibug.doc.ic.ac.uk/resources/300-W/
+			//2D ref points(image coordinates), referenced from detected facial feature
+			//std::vector<cv::Point2d> image_pts;
+			image_pts.push_back(cv::Point2d(shape.part(17).x(), shape.part(17).y())); //#17 left brow left corner
+			image_pts.push_back(cv::Point2d(shape.part(21).x(), shape.part(21).y())); //#21 left brow right corner
+			image_pts.push_back(cv::Point2d(shape.part(22).x(), shape.part(22).y())); //#22 right brow left corner
+			image_pts.push_back(cv::Point2d(shape.part(26).x(), shape.part(26).y())); //#26 right brow right corner
+			image_pts.push_back(cv::Point2d(shape.part(36).x(), shape.part(36).y())); //#36 left eye left corner
+			image_pts.push_back(cv::Point2d(shape.part(39).x(), shape.part(39).y())); //#39 left eye right corner
+			image_pts.push_back(cv::Point2d(shape.part(42).x(), shape.part(42).y())); //#42 right eye left corner
+			image_pts.push_back(cv::Point2d(shape.part(45).x(), shape.part(45).y())); //#45 right eye right corner
+			image_pts.push_back(cv::Point2d(shape.part(31).x(), shape.part(31).y())); //#31 nose left corner
+			image_pts.push_back(cv::Point2d(shape.part(35).x(), shape.part(35).y())); //#35 nose right corner
+			image_pts.push_back(cv::Point2d(shape.part(48).x(), shape.part(48).y())); //#48 mouth left corner
+			image_pts.push_back(cv::Point2d(shape.part(54).x(), shape.part(54).y())); //#54 mouth right corner
+			image_pts.push_back(cv::Point2d(shape.part(57).x(), shape.part(57).y())); //#57 mouth central bottom corner
+			image_pts.push_back(cv::Point2d(shape.part(8).x(), shape.part(8).y()));   //#8 chin corner
+			//	//fill in 2D ref points, annotations follow https://ibug.doc.ic.ac.uk/resources/300-W/
+			//image_pts.push_back(cv::Point2d(shape.part(30).x(), shape.part(30).y()));    // Nose tip
+			//image_pts.push_back(cv::Point2d(shape.part(8).x(), shape.part(8).y()));      // Chin
+			//image_pts.push_back(cv::Point2d(shape.part(36).x(), shape.part(36).y()));    // Left eye left corner
+			//image_pts.push_back(cv::Point2d(shape.part(45).x(), shape.part(45).y()));    // Right eye right corner
+			//image_pts.push_back(cv::Point2d(shape.part(48).x(), shape.part(48).y()));    // Left Mouth corner
+			//image_pts.push_back(cv::Point2d(shape.part(54).x(), shape.part(54).y()));    // Right mouth corner
+
+
+			double focal_length = Frame.cols;
+			camera_matrix = get_camera_matrix(focal_length, cv::Point2d(Frame.cols / 2, Frame.rows / 2));
+
+
+			dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<double>::type);
+
+
+
+			//calc pose
+			//cv::solvePnPRansac(object_compare_pts, image_pts, camera_matrix, dist_coeffs, rotation_vec, translation_vec);
+			cv::solvePnP(object_compare_pts, image_pts, camera_matrix, dist_coeffs, rotation_vec, translation_vec);
+			//cv::solveP3P(object_compare_pts, image_pts, camera_matrix, dist_coeffs, rotation_vec, translation_vec);
 
 
 		//Alt1
@@ -455,28 +461,28 @@ void AWebcamActor::ComputeHeadDataTick()
 		//cv::projectPoints(reprojectsrc, rotation_vec, translation_vec, camera_matrix, dist_coeffs, reprojectdst);
 		//Alt2 END
 		//calc euler angle
-		cv::Rodrigues(rotation_vec, rotation_mat);
-		cv::hconcat(rotation_mat, translation_vec, pose_mat);
-		cv::decomposeProjectionMatrix(pose_mat, out_intrinsics, out_rotation, out_translation, cv::noArray(), cv::noArray(), cv::noArray(), euler_angle);
+			cv::Rodrigues(rotation_vec, rotation_mat);
+			cv::hconcat(rotation_mat, translation_vec, pose_mat);
+			cv::decomposeProjectionMatrix(pose_mat, out_intrinsics, out_rotation, out_translation, cv::noArray(), cv::noArray(), cv::noArray(), euler_angle);
 
-		image_pts.clear();
-		shapes.clear();
-		faces.clear();
+			image_pts.clear();
+			shapes.clear();
+			faces.clear();
 
-		HeadRotator.Pitch = -euler_angle.at<double>(0);
-		HeadRotator.Yaw = euler_angle.at<double>(1);
-		HeadRotator.Roll = -euler_angle.at<double>(2);
+			HeadRotator.Pitch = -euler_angle.at<double>(0);
+			HeadRotator.Yaw = euler_angle.at<double>(1);
+			HeadRotator.Roll = -euler_angle.at<double>(2);
 
-		out_translation = rotation_mat.t() * translation_vec;
+			out_translation = rotation_mat.t() * translation_vec;
 
-		HeadLocation.X = out_translation.at<double>(0);
-		HeadLocation.Y = out_translation.at<double>(1);
-		HeadLocation.Z = out_translation.at<double>(2);
+			HeadLocation.X = out_translation.at<double>(0);
+			HeadLocation.Y = out_translation.at<double>(1);
+			HeadLocation.Z = out_translation.at<double>(2);
+
+		}
 
 	}
-
 	
-
 }
 
 cv::Mat AWebcamActor::get_camera_matrix(float focal_length, cv::Point2d center)

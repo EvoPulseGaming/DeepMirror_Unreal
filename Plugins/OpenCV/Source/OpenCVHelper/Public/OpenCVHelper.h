@@ -9,14 +9,14 @@ Like many third party headers, OpenCV headers require some care when importing.
 When including opencv headers, the includes should be wrapped like this:
 
 	OPENCV_INCLUDES_START
-	#undef check 
+	#undef check
 
 	// your opencv include directives go here...
 
 	OPENCV_INCLUDES_END
 
-Note that the #undef directive is required. The START/END macros will ensure that 
-the previous value is saved and restored, but due to limits of the preprocessor 
+Note that the #undef directive is required. The START/END macros will ensure that
+the previous value is saved and restored, but due to limits of the preprocessor
 cannot undefine the value.
 
 */
@@ -34,4 +34,3 @@ cannot undefine the value.
 #endif
 
 #define OPENCV_INCLUDES_END THIRD_PARTY_INCLUDES_END POP_MACRO(check)
-	
