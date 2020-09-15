@@ -30,6 +30,9 @@ DLIB_INCLUDES_START
 #include "dlib/image_processing/frontal_face_detector.h"
 #include "dlib/image_processing.h" 
 #include "dlib/opencv/cv_image.h"
+#include "dlib/memory_manager_global.h"
+#include "dlib/memory_manager.h"
+#include "Dlib/memory_manager_stateless.h"
 #undef UpdateResource
 DLIB_INCLUDES_END
 

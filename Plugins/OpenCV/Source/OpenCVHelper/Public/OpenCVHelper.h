@@ -23,6 +23,8 @@ cannot undefine the value.
 
 #if PLATFORM_WINDOWS
 #define OPENCV_INCLUDES_START THIRD_PARTY_INCLUDES_START \
+	__pragma(warning(disable: 4263))  /*member function does not override any base class virtual member function*/
+	__pragma(warning(disable: 4264))  /*no override available for virtual member function from base 'cv::detail::ExposureCompensator'; function is hidden*/
 	__pragma(warning(disable: 4190))  /* 'identifier1' has C-linkage specified, but returns UDT 'identifier2' which is incompatible with C */ \
 	__pragma(warning(disable: 6297))  /* Arithmetic overflow:  32-bit value is shifted, then cast to 64-bit value.  Results might not be an expected value. */ \
 	__pragma(warning(disable: 6294))  /* Ill-defined for-loop:  initial condition does not satisfy test.  Loop body not executed. */ \

@@ -18,7 +18,45 @@ AWebcamActor::AWebcamActor()
 	RefreshTime = 1000000.0f;
 	bDebugFaceLandmarks = true;
 	VideoSize = FVector2D(0, 0);
-	Webcam = new cv::VideoCapture();
+	stream = cv::VideoCapture();
+	Frame = cv::Mat();
+	gray = cv::Mat();
+	FrameToLightSize = cv::Mat();
+	LightEstimationFrame = cv::Mat();
+	smallMat = cv::Mat();
+	StreamIn.clear();
+	inputBlob = cv::Mat();
+
+
+	//FMemory::Free(&pose_model_shape_predictor);
+	//pose_model_shape_predictor
+	//FMemory::Free(&r);
+	detection = cv::Mat();
+	detectionMat = cv::Mat();
+	//FMemory::Free(&object_compare_pts);
+	//FMemory::Free(&image_pts);
+	//FMemory::Free(&reprojectdst);
+	//FMemory::Free(&reprojectsrc);
+
+	//FMemory::Free(&net);
+
+	//FMemory::Free(&shapes);
+	//FMemory::Free(&shape);
+	//FMemory::Free(&center);
+
+	camera_matrix = cv::Mat();
+	dist_coeffs = cv::Mat();
+	rotation_vector = cv::Mat();
+	translation_vector = cv::Mat();
+	nose_end_point3D.empty();
+	nose_end_point2D.empty();
+	rotation_mat = cv::Mat();
+	pose_mat = cv::Mat();
+	euler_angle = cv::Mat();
+	out_intrinsics = cv::Mat();
+	out_rotation = cv::Mat();
+	out_translation = cv::Mat();
+
 
 }
 
@@ -26,9 +64,46 @@ AWebcamActor::~AWebcamActor()
 {
 	if (!bMemoryReleased)
 	{
+		isStreamOpen = false;
 
-		FMemory::Free(Size);
-		FMemory::Free(Webcam);
+		stream.release();
+		Frame.release();
+		gray.release();
+		FrameToLightSize.release();
+		LightEstimationFrame.release();
+		smallMat.release();
+		StreamIn.clear();
+		inputBlob.release();
+
+		//FMemory::Free(&pose_model_shape_predictor);
+
+		//FMemory::Free(&r);
+
+		detection.release();
+		detectionMat.release();
+		object_compare_pts.clear();
+		image_pts.clear();
+		reprojectdst.clear();
+		reprojectsrc.clear();
+
+		//FMemory::Free(&net);
+
+		shapes.clear();
+		//FMemory::Free(&shape);
+		//FMemory::Free(&center);
+
+		camera_matrix.release();
+		dist_coeffs.release();
+		rotation_vector.release();
+		translation_vector.release();
+		nose_end_point3D.clear();
+		nose_end_point2D.clear();
+		rotation_mat.release();
+		pose_mat.release();
+		euler_angle.release();
+		out_intrinsics.release();
+		out_rotation.release();
+		out_translation.release();
 	}
 }
 
@@ -41,18 +116,30 @@ void AWebcamActor::BeginPlay()
 
 	bMemoryReleased = false;
 
-	Webcam->open(CameraID);
-	if (Webcam->isOpened())
+
+	stream.open(CameraID);
+	if (stream.grab() && stream.isOpened())
 	{
-		bCamOpen = true;
+
+		isStreamOpen = true;
 		UpdateFrame();
 		VideoSize = FVector2D(Frame.cols, Frame.rows);
-		Size = new cv::Size(VideoSize.X, VideoSize.Y);
+
 		VideoTexture = UTexture2D::CreateTransient(VideoSize.X, VideoSize.Y);
 		VideoTexture->UpdateResource();
 		VideoUpdateTextureRegion = new FUpdateTextureRegion2D(0, 0, 0, 0, VideoSize.X, VideoSize.Y);
-
 		CameraData.Init(FColor(0, 0, 0, 255), VideoSize.X * VideoSize.Y);
+
+		xSizeLight = xSizeScale * VideoSize.X;
+		ySizeLight = ySizeScale * VideoSize.Y;
+
+		LightEstVideoTexture = UTexture2D::CreateTransient(xSizeLight, ySizeLight, PF_R8_UINT);
+		LightEstVideoTexture->UpdateResource();
+		LightEstVideoUpdateTextureRegion = new FUpdateTextureRegion2D(0, 0, 0, 0, xSizeLight, ySizeLight);
+		EstimatedLights.Init(0, xSizeLight * ySizeLight);
+
+
+
 
 		FString deploypath = FString::Printf(TEXT("S:/GitHub/DeepMirror_Unreal/Plugins/DeepMirrorPlugin/Source/caffeemodels/deploy.prototxt"));
 		FString caffemodelpath = FString::Printf(TEXT("S:/GitHub/DeepMirror_Unreal/Plugins/DeepMirrorPlugin/Source/caffeemodels/res10_300x300_ssd_iter_140000_fp16.caffemodel"));
@@ -73,20 +160,12 @@ void AWebcamActor::BeginPlay()
 		}
 
 
-		SKIP_FRAMES = 2;
-		FACE_DOWNSAMPLE_RATIO = 2;
-
-
-		UpdateCount = 0;
-
 		FString ShapePath = FPaths::Combine(FPaths::ProjectContentDir(), TEXT("TestRes/shape_predictor_68_face_landmarks.dat"));
 
 		StreamIn = std::ifstream(TCHAR_TO_UTF8(*ShapePath), std::ios::binary);
 
+
 		dlib::deserialize(pose_model_shape_predictor, StreamIn);
-
-
-
 
 
 		//fill in 3D ref points(world coordinates), model referenced from http://aifi.isr.uc.pt/Downloads/OpenGL/glAnthropometric3DModel.cpp
@@ -129,35 +208,8 @@ void AWebcamActor::BeginPlay()
 		out_rotation = cv::Mat(3, 3, CV_64FC1);
 		out_translation = cv::Mat(3, 1, CV_64FC1);
 
-	
-
-
-		//Init kalman
-		for (int i = 0; i < 68; i++)
-		{
-			KF.transitionMatrix = (cv::Mat_<float>(stateNum, stateNum) << 1, 0, 1, 0,
-				0, 1, 0, 1,
-				0, 0, 1, 0,
-				0, 0, 0, 1);
-
-			setIdentity(KF.measurementMatrix);
-			setIdentity(KF.processNoiseCov, cv::Scalar::all(1e-5));
-			setIdentity(KF.measurementNoiseCov, cv::Scalar::all(1e-1));
-			setIdentity(KF.errorCovPost, cv::Scalar::all(1));
-			randn(KF.statePost, cv::Scalar::all(0), cv::Scalar::all(0.1));
-			KFs[i] = KF;
-			measurements[i] = measurement;
-
-		}
-
-
-
-
-
-
-
-
-
+		// Do first frame
+		//UpdateTexture();
 	}
 	else
 	{
@@ -176,8 +228,9 @@ void AWebcamActor::Tick(float DeltaTime)
 void AWebcamActor::CameraTimerTick()
 {
 	RefreshTime += 0.08f;
-	if (bCamOpen && RefreshTime >= 1.f / RefreshFPS)
+	if (stream.isOpened() && RefreshTime >= 1.f / RefreshFPS)
 	{
+		stream.grab();
 		RefreshTime -= 1.f / RefreshFPS;
 		UpdateFrame();
 		ComputeHeadDataTick(); //refresh rate is controlled above
@@ -187,15 +240,20 @@ void AWebcamActor::CameraTimerTick()
 
 void AWebcamActor::UpdateFrame()
 {
-	if (bCamOpen)
+	if (stream.isOpened())
 	{
-		Webcam->read(Frame);
+		stream.retrieve(Frame);
+	}
+	else
+	{
+		isStreamOpen = false;
 	}
 }
 
+
 void AWebcamActor::UpdateTexture()
 {
-	if (bCamOpen && Frame.data)
+	if (stream.isOpened() && Frame.data)
 	{
 		for (int y = 0; y < VideoSize.Y; y++)
 		{
@@ -208,16 +266,53 @@ void AWebcamActor::UpdateTexture()
 			}
 		}
 
-		UpdateTextureRegions(VideoTexture, (int32)0, (uint32)1, VideoUpdateTextureRegion,
-			(uint32)(4 * VideoSize.X), (uint32)4, (uint8*)CameraData.GetData(), false);
+		UpdateTextureRegions(VideoTexture, (int32)0, (uint32)1, VideoUpdateTextureRegion, (uint32)(4 * VideoSize.X), (uint32)4, (uint8*)CameraData.GetData(), false);
+
+
+		cv::resize(Frame, FrameToLightSize, cv::Size(xSizeLight, ySizeLight), cv::INTER_LANCZOS4);
+
+		//https://www.researchgate.net/publication/274640792_Illumination_Estimation_Based_Color_to_Grayscale_Conversion_Algorithms
+
+		//at gray(src.size(), CV_8UC1, Scalar(0));
+
+
+		gray.cols = FrameToLightSize.cols;
+		gray.rows = FrameToLightSize.rows;
+		//assuming float (CV_32F)
+		//make sure that the weights sum to 1 (or less) to avoid saturation.
+		//on a BGR image you should get the same as BGR2GRAY.If you use(1 / 3.0, 1 / 3.0, 1 / 3.0) instead
+		//you should get an average of the 3 channels.Adjust to your liking.
+		cv::transform(FrameToLightSize, gray, cv::Matx13f(0.114, 0.587, 0.299));
+
+		for (int y = 0; y < gray.rows; y++)
+		{
+			for (int x = 0; x < gray.cols; x++)
+			{
+				int i = x + (y * gray.cols);
+				EstimatedLights[i] = gray.data[i];
+			}
+		}
+
+		UpdateTextureRegions(LightEstVideoTexture, (int32)0, (uint32)1, LightEstVideoUpdateTextureRegion, (uint32)(1 * xSizeLight), (uint32)1, (uint8*)EstimatedLights.GetData(), false);
+
 	}
 }
 
-void AWebcamActor::UpdateTextureRegions(UTexture2D * Texture, int32 MipIndex, uint32 NumRegions, FUpdateTextureRegion2D * Regions,
-	uint32 SrcPitch, uint32 SrcBpp, uint8 * SrcData, bool bFreeData)
+void AWebcamActor::UpdateTextureRegions(UTexture2D* Texture, int32 MipIndex, uint32 NumRegions, FUpdateTextureRegion2D* Regions, uint32 SrcPitch, uint32 SrcBpp, uint8* SrcData, bool bFreeData)
 {
 	if (Texture->Resource)
 	{
+		struct FUpdateTextureRegionsData
+		{
+			FTexture2DResource* Texture2DResource;
+			int32 MipIndex;
+			uint32 NumRegions;
+			FUpdateTextureRegion2D* Regions;
+			uint32 SrcPitch;
+			uint32 SrcBpp;
+			uint8* SrcData;
+		};
+
 		FUpdateTextureRegionsData* RegionData = new FUpdateTextureRegionsData;
 
 		RegionData->Texture2DResource = (FTexture2DResource*)Texture->Resource;
@@ -228,27 +323,26 @@ void AWebcamActor::UpdateTextureRegions(UTexture2D * Texture, int32 MipIndex, ui
 		RegionData->SrcBpp = SrcBpp;
 		RegionData->SrcData = SrcData;
 
-		ENQUEUE_UNIQUE_RENDER_COMMAND_TWOPARAMETER(UpdateTextureRegionsData, FUpdateTextureRegionsData*,
-			RegionData, RegionData,
+		ENQUEUE_UNIQUE_RENDER_COMMAND_TWOPARAMETER(
+			UpdateTextureRegionsData,
+			FUpdateTextureRegionsData*, RegionData, RegionData,
 			bool, bFreeData, bFreeData,
 			{
-
-				for (uint32 regionIndex = 0; regionIndex < RegionData->NumRegions; ++regionIndex)
+			for (uint32 RegionIndex = 0; RegionIndex < RegionData->NumRegions; ++RegionIndex)
+			{
+				int32 CurrentFirstMip = RegionData->Texture2DResource->GetCurrentFirstMip();
+				if (RegionData->MipIndex >= CurrentFirstMip)
 				{
-					int32 currentFirstMip = RegionData->Texture2DResource->GetCurrentFirstMip();
-					if (RegionData->MipIndex >= currentFirstMip)
-					{
-						RHIUpdateTexture2D(
-							RegionData->Texture2DResource->GetTexture2DRHI(),
-							RegionData->MipIndex - currentFirstMip,
-							RegionData->Regions[regionIndex],
-							RegionData->SrcPitch,
-							RegionData->SrcData + RegionData->Regions[regionIndex].SrcY * RegionData->SrcPitch
-							+ RegionData->Regions[regionIndex].SrcX * RegionData->SrcBpp
+					RHIUpdateTexture2D(
+						RegionData->Texture2DResource->GetTexture2DRHI(),
+						RegionData->MipIndex - CurrentFirstMip,
+						RegionData->Regions[RegionIndex],
+						RegionData->SrcPitch,
+						RegionData->SrcData
+						+ RegionData->Regions[RegionIndex].SrcY * RegionData->SrcPitch
+						+ RegionData->Regions[RegionIndex].SrcX * RegionData->SrcBpp
 						);
-					}
 				}
-
 			}
 			if (bFreeData)
 			{
@@ -256,15 +350,14 @@ void AWebcamActor::UpdateTextureRegions(UTexture2D * Texture, int32 MipIndex, ui
 				FMemory::Free(RegionData->SrcData);
 			}
 			delete RegionData;
-			);
-
+			});
 	}
 }
 
 void AWebcamActor::ComputeHeadDataTick()
 {
 
-	if (bCamOpen && Frame.empty() && !Frame.data)
+	if (stream.isOpened() && Frame.empty() && !Frame.data)
 		return;
 
 	if (Frame.channels() == 4)
@@ -275,7 +368,7 @@ void AWebcamActor::ComputeHeadDataTick()
 	float inScaleFactor = 1;
 	float meanVal = 1;
 
-	inputBlob = cv::dnn::blobFromImage(Frame, inScaleFactor, cv::Size(400,300), meanVal, false, false);
+	inputBlob = cv::dnn::blobFromImage(Frame, inScaleFactor, cv::Size(400, 300), meanVal, false, false);
 
 
 	net.setInput(inputBlob, "data");
@@ -307,8 +400,8 @@ void AWebcamActor::ComputeHeadDataTick()
 			);
 
 			shape = pose_model_shape_predictor(cimg, r);
-			
-			ProcessShapeWithKalman(shape);
+
+
 
 			shapes.push_back(shape);
 
@@ -344,13 +437,13 @@ void AWebcamActor::ComputeHeadDataTick()
 
 			// Camera internals
 			focal_length = Frame.cols; // Approximate focal length.
-			
+
 			center = cv::Point2d(Frame.cols / 2, Frame.rows / 2);
-			
+
 			camera_matrix = (cv::Mat_<double>(3, 3) << focal_length, 0, center.x, 0, focal_length, center.y, 0, 0, 1);
-			
+
 			dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<double>::type); // Assuming no lens distortion
-			
+
 
 			// Solve for pose
 
@@ -365,7 +458,7 @@ void AWebcamActor::ComputeHeadDataTick()
 			// We use this to draw a line sticking out of the nose
 			nose_end_point3D.push_back(cv::Point3d(0, 0, 1000.0));
 
-			projectPoints(nose_end_point3D, rotation_vector, translation_vector, camera_matrix, dist_coeffs, nose_end_point2D);
+			projectPoints(nose_end_point3D, rotation_vector, translation_vector, camera_matrix, dist_coeffs, nose_end_point2D, cv::noArray(), 1);
 
 
 			HeadLocation.X = translation_vector.at<double>(0);
@@ -386,39 +479,60 @@ void AWebcamActor::ComputeHeadDataTick()
 
 			image_pts.clear();
 			shapes.clear();
+			nose_end_point3D.clear();
 
 
 		}
 
 	}
-	
-}
 
-cv::Mat AWebcamActor::get_camera_matrix(float focal_length, cv::Point2d center)
-{
-	cv::Mat camera_matrix = (cv::Mat_<double>(3, 3) << focal_length, 0, center.x, 0, focal_length, center.y, 0, 0, 1);
-	return camera_matrix;
-}
-
-void AWebcamActor::ProcessShapeWithKalman(const dlib::full_object_detection& shape)
-{
-	for (int i = 0; i < (int)(shape.num_parts()); i++)
-	{
-		cv::Mat prediction = KFs[i].predict();
-		cv::Point predict_pt = cv::Point((int)prediction.at<float>(0), (int)prediction.at<float>(1));
-		measurements[i].at<float>(0) = (float)shape.part(i).x();
-		measurements[i].at<float>(1) = (float)shape.part(i).y();
-		KFs[i].correct(measurements[i]);
-		facePoints[i] = predict_pt;
-	}
 }
 
 void AWebcamActor::EndPlay(EEndPlayReason::Type reasonType)
 {
-	if (bCamOpen)
+	if (isStreamOpen)
 	{
-		bCamOpen = false;
-		Webcam->release();
+		GetWorldTimerManager().ClearTimer(timerHandle);
+		isStreamOpen = false;
+
+		stream.release();
+		Frame.release();
+		gray.release();
+		FrameToLightSize.release();
+		LightEstimationFrame.release();
+		smallMat.release();
+		StreamIn.clear();
+		inputBlob.release();
+
+		//FMemory::Free(&pose_model_shape_predictor);
+
+		//FMemory::Free(&r);
+
+		detection.release();
+		detectionMat.release();
+		object_compare_pts.clear();
+		image_pts.clear();
+		reprojectdst.clear();
+		reprojectsrc.clear();
+
+		//FMemory::Free(&net);
+
+		shapes.clear();
+		//FMemory::Free(&shape);
+		//FMemory::Free(&center);
+
+		camera_matrix.release();
+		dist_coeffs.release();
+		rotation_vector.release();
+		translation_vector.release();
+		nose_end_point3D.clear();
+		nose_end_point2D.clear();
+		rotation_mat.release();
+		pose_mat.release();
+		euler_angle.release();
+		out_intrinsics.release();
+		out_rotation.release();
+		out_translation.release();
 	}
 
 	bMemoryReleased = true;
