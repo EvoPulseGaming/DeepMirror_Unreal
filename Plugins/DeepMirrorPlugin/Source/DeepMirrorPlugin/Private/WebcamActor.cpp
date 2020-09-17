@@ -467,8 +467,23 @@ void AWebcamActor::ComputeHeadDataTick()
 
 			//All this just for rotation
 			cv::Rodrigues(rotation_vector, rotation_mat);
+			//UE4 = X Forward, Z Up, Y Right
+			
+
 			cv::hconcat(rotation_mat, translation_vector, pose_mat);
-			cv::decomposeProjectionMatrix(pose_mat, out_intrinsics, out_rotation, out_translation, cv::noArray(), cv::noArray(), cv::noArray(), euler_angle);
+			cv::decomposeProjectionMatrix(pose_mat, out_intrinsics, out_rotation, out_translation, cv::noArray(), cv::noArray(), cv::noArray(), euler_angle); //XYZ
+
+
+
+
+			
+			//y_rot = asin(rotation_mat[2][0])
+			//	x_rot = acos(rotation_mat[2][2] / math.cos(y_rot))
+			//	z_rot = acos(rotation_mat[0][0] / math.cos(y_rot))
+			//	y_rot_angle = y_rot * (180 / 3.1415)
+			//	x_rot_angle = x_rot * (180 / 3.1415)
+			//	z_rot_angle = z_rot * (180 / 3.1415)
+
 
 			HeadRotator.Pitch = -euler_angle.at<double>(0);
 			HeadRotator.Yaw = euler_angle.at<double>(1);

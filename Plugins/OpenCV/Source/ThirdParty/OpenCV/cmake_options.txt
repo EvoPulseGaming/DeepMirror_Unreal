@@ -1,22 +1,58 @@
 # Default cmake cache entries for overriding the default settings
-set(BUILD_DOCS false CACHE BOOL "")
-set(WITH_FFMPEG false CACHE BOOL "")
-set(WITH_CUDA false CACHE BOOL "")
-set(WITH_GSTREAMER false CACHE BOOL "")
-set(WITH_JASPER false CACHE BOOL "")
-set(WITH_WIN32UI false CACHE BOOL "")
-set(WITH_JPEG false CACHE BOOL "")
-set(BUILD_opencv_java false CACHE BOOL "")
-set(WITH_1394 false CACHE BOOL "")
-set(WITH_MATLAB false CACHE BOOL "")
-set(WITH_TIFF false CACHE BOOL "")
-set(BUILD_opencv_world true CACHE BOOL "")
-set(INSTALL_C_EXAMPLES false CACHE BOOL "")
-set(INSTALL_PYTHtrue_EXAMPLES false CACHE BOOL "")
-set(BUILD_opencv_pythtrue2 false CACHE BOOL "")
-set(BUILD_opencv_pythtrue3 false CACHE BOOL "")
-set(BUILD_opencv_apps false CACHE BOOL "")
-set(BUILD_TESTS false CACHE BOOL "")
-set(BUILD_PERF_TESTS false CACHE BOOL "")
-set(WITH_EIGEN false CACHE BOOL "")
-set(WITH_IPP false CACHE BOOL "")
+set(BUILD_DOCS 						false	 CACHE BOOL "")
+set(WITH_FFMPEG 					false	 CACHE BOOL "")
+set(WITH_CUDA 						false	 CACHE BOOL "")
+set(WITH_GSTREAMER 					false	 CACHE BOOL "")
+set(WITH_JASPER 					false	 CACHE BOOL "")
+set(WITH_WIN32UI 					false	 CACHE BOOL "")
+set(WITH_JPEG 						false	 CACHE BOOL "")
+set(BUILD_opencv_java 				false	 CACHE BOOL "")
+set(WITH_1394 						false	 CACHE BOOL "")
+set(WITH_MATLAB 					false	 CACHE BOOL "")
+set(WITH_TIFF 						false	 CACHE BOOL "")
+set(BUILD_opencv_world 				true	 CACHE BOOL "")
+set(INSTALL_C_EXAMPLES 				false	 CACHE BOOL "")
+set(INSTALL_PYTHtrue_EXAMPLES 		false	 CACHE BOOL "")
+set(BUILD_opencv_pythtrue2 			false	 CACHE BOOL "")
+set(BUILD_opencv_pythtrue3 			false	 CACHE BOOL "")
+set(BUILD_opencv_apps 				false	 CACHE BOOL "")
+set(BUILD_TESTS 					false	 CACHE BOOL "")
+set(BUILD_PERF_TESTS 				false	 CACHE BOOL "")
+set(WITH_EIGEN 						false	 CACHE BOOL "")
+set(WITH_IPP 						false	 CACHE BOOL "")
+
+set(BUILD_opencv_alphamat 			false	 CACHE BOOL "") # Computer Vision based Alpha Matting -- Given an input image and a trimap, generate an alpha matte.
+set(BUILD_opencv_aruco 				false	 CACHE BOOL "") # ArUco and ChArUco Markers -- Augmented reality ArUco marker and "ChARUco" markers where ArUco markers embedded inside the white areas of the checker board.
+set(BUILD_opencv_bgsegm 			false	 CACHE BOOL "") # Background segmentation algorithm combining statistical background image estimation and per-pixel Bayesian segmentation.
+set(BUILD_opencv_bioinspired 		false	 CACHE BOOL "") # Biological Vision -- Biologically inspired vision model # minimize noise and luminance variance, transient event segmentation, high dynamic range tone mapping methods.
+set(BUILD_opencv_ccalib 			true	 CACHE BOOL "") # Custom Calibration -- Patterns for 3D reconstruction, omnidirectional camera calibration, random pattern calibration and multi-camera calibration.
+set(BUILD_opencv_cnn_3dobj 			true	 CACHE BOOL "") # Deep Object Recognition and Pose -- Uses Caffe Deep Neural Net library to build, train and test a CNN model of visual object recognition and pose.
+set(BUILD_opencv_cvv 				true	 CACHE BOOL "") # Computer Vision Debugger -- Simple code that you can add to your program that pops up a GUI allowing you to interactively and visually debug computer vision programs.
+set(BUILD_opencv_datasets 			false	 CACHE BOOL "") # Datasets Reader -- Code for reading existing computer vision databases and samples of using the readers to train, test and run using that dataset's data.
+set(BUILD_opencv_dnn_objdetect 		true	 CACHE BOOL "") # Object Detection using CNNs -- Implements compact CNN Model for object detection. Trained using Caffe but uses opencv_dnn module.
+set(BUILD_opencv_dnn_superres 		false	 CACHE BOOL "") # Superresolution using CNNs -- Contains four trained convolutional neural networks to upscale images.
+set(BUILD_opencv_dnns_easily_fooled false	 CACHE BOOL "") # Subvert DNNs -- This code can use the activations in a network to fool the networks into recognizing something else.
+set(BUILD_opencv_dpm 				false	 CACHE BOOL "") # Deformable Part Model -- Felzenszwalb's Cascade with deformable parts object recognition code.
+set(BUILD_opencv_face 				true	 CACHE BOOL "") # Face Recognition -- Face recognition techniques # Eigen, Fisher and Local Binary Pattern Histograms LBPH methods.
+set(BUILD_opencv_freetype 			false	 CACHE BOOL "") # Drawing text using freetype and harfbuzz.
+set(BUILD_opencv_fuzzy 				false	 CACHE BOOL "") # Fuzzy Logic in Vision -- Fuzzy logic image transform and inverse; Fuzzy image processing.
+set(BUILD_opencv_hdf 				false	 CACHE BOOL "") # Hierarchical Data Storage -- This module contains I/O routines for Hierarchical Data Format # https #//en.m.wikipedia.org/wiki/Hierarchical_Data_Format meant to store large amounts of data.
+set(BUILD_opencv_julia 				false	 CACHE BOOL "") # Julia language wrappers with samples and tests.
+set(BUILD_opencv_line_descriptor 	false	 CACHE BOOL "") # Line Segment Extract and Match -- Methods of extracting, describing and latching line segments using binary descriptors.
+set(BUILD_opencv_matlab 			false	 CACHE BOOL "") # Matlab Interface -- OpenCV Matlab Mex wrapper code generator for certain opencv core modules.
+set(BUILD_opencv_optflow 			false	 CACHE BOOL "") # Optical Flow -- Algorithms for running and evaluating deepflow, simpleflow, sparsetodenseflow and motion templates (silhouette flow).
+set(BUILD_opencv_ovis 				false	 CACHE BOOL "") # OGRE 3D Visualiser -- allows you to render 3D data using the OGRE 3D engine.
+set(BUILD_opencv_plot 				true	 CACHE BOOL "") # Plotting -- The plot module allows you to easily plot data in 1D or 2D.
+set(BUILD_opencv_reg 				false	 CACHE BOOL "") # Image Registration -- Pixels based image registration for precise alignment. Follows the paper "Image Alignment and Stitching # A Tutorial", by Richard Szeliski.
+set(BUILD_opencv_rgbd 				false	 CACHE BOOL "") # RGB-Depth Processing module -- Linemod 3D object recognition; Fast surface normals and 3D plane finding. 3D visual odometry. 3d reconstruction using KinectFusion.
+set(BUILD_opencv_saliency 			false	 CACHE BOOL "") # Saliency API -- Where humans would look in a scene. Has routines for static, motion and "objectness" saliency.
+set(BUILD_opencv_sfm 				false	 CACHE BOOL "") # Structure from Motion -- This module contains algorithms to perform 3d reconstruction from 2d images. The core of the module is a light version of Libmv.
+set(BUILD_opencv_stereo 			false	 CACHE BOOL "") # Stereo Correspondence -- Stereo matching done with different descriptors # Census / CS-Census / MCT / BRIEF / MV and dense stereo correspondence using Quasi Dense Stereo method.
+set(BUILD_opencv_structured_light 	false	 CACHE BOOL "") # Structured Light Use -- How to generate and project gray code patterns and use them to find dense depth in a scene.
+set(BUILD_opencv_surface_matching 	false	 CACHE BOOL "") # Point Pair Features -- Implements 3d object detection and localization using multimodal point pair features.
+set(BUILD_opencv_text 				false	 CACHE BOOL "") # Visual Text Matching -- In a visual scene, detect text, segment words and recognise the text.
+set(BUILD_opencv_tracking 			true	 CACHE BOOL "") # Vision Based Object Tracking -- Use and/or evaluate one of 5 different visual object tracking techniques.
+set(BUILD_opencv_xfeatures2d 		false	 CACHE BOOL "") # Features2D extra -- Extra 2D Features Framework containing experimental and non-free 2D feature detector/descriptor algorithms. SURF, BRIEF, Censure, Freak, LUCID, Daisy, Self-similar.
+set(BUILD_opencv_ximgproc 			false	 CACHE BOOL "") # Extended Image Processing -- Structured Forests / Domain Transform Filter / Guided Filter / Adaptive Manifold Filter / Joint Bilateral Filter / Superpixels / Ridge Detection Filter.
+set(BUILD_opencv_xobjdetect 		false	 CACHE BOOL "") # Boosted 2D Object Detection -- Uses a Waldboost cascade and local binary patterns computed as integral features for 2D object detection.
+set(BUILD_opencv_xphoto 			false	 CACHE BOOL "") # Extra Computational Photography -- Additional photo processing algorithms # Color balance / Denoising / Inpainting.

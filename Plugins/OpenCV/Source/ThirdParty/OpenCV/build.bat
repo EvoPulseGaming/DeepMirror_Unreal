@@ -1,7 +1,11 @@
-@ECHO OFF
+
 set opencv_ver=4.4.0
+
 set opencv_url=https://github.com/opencv/opencv/archive/%opencv_ver%.zip
 set opencv_src=opencv-%opencv_ver%
+
+set opencv_contrib_url=https://github.com/opencv/opencv_contrib/archive/%opencv_ver%.zip
+set opencv_contrib_src=opencv_contrib-%opencv_ver%
 
 for %%x in ("..\..\..\Binaries\ThirdParty") do set bin_path=%%~fx
 for %%x in ("lib") do set lib_path=%%~fx
@@ -19,6 +23,15 @@ IF NOT EXIST %opencv_src% (
     powershell -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::ExtractToDirectory('%opencv_src%.zip', '.')"
 )
 
+IF NOT EXIST %opencv_contrib_src% (
+    IF NOT EXIST %opencv_contrib_src%.zip (
+        echo Downloading %opencv_contrib_url%...
+        powershell -Command "(New-Object Net.WebClient).DownloadFile('%opencv_contrib_url%', '%opencv_contrib_src%.zip')"
+    )
+    echo Extracting %opencv_contrib_src%.zip...
+    powershell -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::ExtractToDirectory('%opencv_contrib_src%.zip', '.')"
+)
+
 
 echo Deleting existing build directories...
 if exist x86 rd /s /q x86
@@ -28,7 +41,7 @@ md x86
 pushd x86
 
 echo Configuring x86 build...
-cmake -G "Visual Studio 15 2017" -C %~dp0\cmake_options.txt -DCMAKE_INSTALL_PREFIX=%~dp0 ..\%opencv_src%
+cmake -G "Visual Studio 15 2017" -C %~dp0\cmake_options.txt -DCMAKE_INSTALL_PREFIX=%~dp0 -DOPENCV_EXTRA_MODULES_PATH=..\%opencv_contrib_src%/modules ..\%opencv_src%
 
 echo Building x86 Release build...
 cmake.exe --build . --config Release --target INSTALL -- /m:4
@@ -41,7 +54,7 @@ md x64
 pushd x64
 
 echo Configuring x64 build...
-cmake -G "Visual Studio 15 2017 Win64" -C %~dp0\cmake_options.txt -DCMAKE_INSTALL_PREFIX=%~dp0 ..\%opencv_src%
+cmake -G "Visual Studio 15 2017 Win64" -C %~dp0\cmake_options.txt -DCMAKE_INSTALL_PREFIX=%~dp0 -DOPENCV_EXTRA_MODULES_PATH=..\%opencv_contrib_src%/modules ..\%opencv_src%
 
 echo Building x64 Release build...
 cmake.exe --build . --config Release --target INSTALL -- /m:4

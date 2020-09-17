@@ -15,6 +15,9 @@ OPENCV_INCLUDES_START
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/calib3d.hpp"
+#include "opencv2/face.hpp"
+#include "opencv2/tracking.hpp"
+
 #undef UpdateResource
 OPENCV_INCLUDES_END
 
@@ -30,9 +33,6 @@ DLIB_INCLUDES_START
 #include "dlib/image_processing/frontal_face_detector.h"
 #include "dlib/image_processing.h" 
 #include "dlib/opencv/cv_image.h"
-#include "dlib/memory_manager_global.h"
-#include "dlib/memory_manager.h"
-#include "Dlib/memory_manager_stateless.h"
 #undef UpdateResource
 DLIB_INCLUDES_END
 
