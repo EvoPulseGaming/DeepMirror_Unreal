@@ -59,3 +59,4 @@ Plugins/Dlib/Source/ThirdParty/Dlib/etc/**
 Plugins/Dlib/Libraries/**
 
 
+Plugins/OpenCV/Source/ThirdParty/OpenCV/python/**
