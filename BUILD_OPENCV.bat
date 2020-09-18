@@ -1,1 +1,2 @@
-Plugins\OpenCV\Source\ThirdParty\OpenCV\Build.bat
+cd Plugins\OpenCV\Source\ThirdParty\OpenCV\
+build.bat
