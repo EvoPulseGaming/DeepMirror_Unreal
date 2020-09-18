@@ -1,4 +1,4 @@
-
+@ECHO OFF
 set opencv_ver=4.4.0
 
 set opencv_url=https://github.com/opencv/opencv/archive/%opencv_ver%.zip
@@ -41,7 +41,13 @@ md x86
 pushd x86
 
 echo Configuring x86 build...
-cmake -G "Visual Studio 15 2017" -C %~dp0\cmake_options.txt -DCMAKE_INSTALL_PREFIX=%~dp0 -DOPENCV_EXTRA_MODULES_PATH=..\%opencv_contrib_src%/modules ..\%opencv_src%
+if "%1" == "-2019" (
+	echo Compiling for 2019
+	cmake -G "Visual Studio 16 2019" -C %~dp0\cmake_options.txt -DCMAKE_INSTALL_PREFIX=%~dp0 -DOPENCV_EXTRA_MODULES_PATH=..\%opencv_contrib_src%/modules ..\%opencv_src%
+	) else (
+	echo Compiling for 2017
+	cmake -G "Visual Studio 15 2017" -C %~dp0\cmake_options.txt -DCMAKE_INSTALL_PREFIX=%~dp0 -DOPENCV_EXTRA_MODULES_PATH=..\%opencv_contrib_src%/modules ..\%opencv_src%
+)
 
 echo Building x86 Release build...
 cmake.exe --build . --config Release --target INSTALL -- /m:4
@@ -54,7 +60,13 @@ md x64
 pushd x64
 
 echo Configuring x64 build...
-cmake -G "Visual Studio 15 2017 Win64" -C %~dp0\cmake_options.txt -DCMAKE_INSTALL_PREFIX=%~dp0 -DOPENCV_EXTRA_MODULES_PATH=..\%opencv_contrib_src%/modules ..\%opencv_src%
+if "%1" == "-2019" (
+	echo Compiling for 2019
+	cmake -G "Visual Studio 16 2019 Win64" -C %~dp0\cmake_options.txt -DCMAKE_INSTALL_PREFIX=%~dp0 -DOPENCV_EXTRA_MODULES_PATH=..\%opencv_contrib_src%/modules ..\%opencv_src%
+	) else (
+	echo Compiling for 2017
+	cmake -G "Visual Studio 15 2017 Win64" -C %~dp0\cmake_options.txt -DCMAKE_INSTALL_PREFIX=%~dp0 -DOPENCV_EXTRA_MODULES_PATH=..\%opencv_contrib_src%/modules ..\%opencv_src%
+)
 
 echo Building x64 Release build...
 cmake.exe --build . --config Release --target INSTALL -- /m:4
