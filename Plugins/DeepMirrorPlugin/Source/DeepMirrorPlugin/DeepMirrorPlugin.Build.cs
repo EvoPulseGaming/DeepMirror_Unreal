@@ -62,6 +62,7 @@ public class DeepMirrorPlugin : ModuleRules
 				"OpenCVHelper",
 				"Dlib",
 				"DlibHelper",
+				"Projects", //to get the root dir of this plugin later in code
 			}
 			);
 			

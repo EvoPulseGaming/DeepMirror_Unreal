@@ -3,7 +3,7 @@
 #include "Engine/Texture2D.h"
 
 #include "DeepMirrorPlugin.h"
-
+#include "Interfaces/IPluginManager.h"
 #include "OpenCV_Common.h"
 #include "cmath"
 
@@ -140,13 +140,10 @@ void AWebcamActor::BeginPlay()
 
 
 
+		FString ContentDir = IPluginManager::Get().FindPlugin("DeepMirrorPlugin")->GetBaseDir();
 
-		FString deploypath = FString::Printf(TEXT("S:/GitHub/DeepMirror_Unreal/Plugins/DeepMirrorPlugin/Source/caffeemodels/deploy.prototxt"));
-		FString caffemodelpath = FString::Printf(TEXT("S:/GitHub/DeepMirror_Unreal/Plugins/DeepMirrorPlugin/Source/caffeemodels/res10_300x300_ssd_iter_140000_fp16.caffemodel"));
-
-
-		std::string proto = "S:/GitHub/DeepMirror_Unreal/Plugins/DeepMirrorPlugin/Source/caffeemodels/deploy.prototxt";
-		std::string caffe = "S:/GitHub/DeepMirror_Unreal/Plugins/DeepMirrorPlugin/Source/caffeemodels/res10_300x300_ssd_iter_140000_fp16.caffemodel";
+		std::string proto = std::string(TCHAR_TO_UTF8(*ContentDir)) +"/Source/caffeemodels/deploy.prototxt";
+		std::string caffe = std::string(TCHAR_TO_UTF8(*ContentDir)) +"/Source/caffeemodels/res10_300x300_ssd_iter_140000_fp16.caffemodel";
 
 
 
@@ -160,9 +157,9 @@ void AWebcamActor::BeginPlay()
 		}
 
 
-		FString ShapePath = FPaths::Combine(FPaths::ProjectContentDir(), TEXT("TestRes/shape_predictor_68_face_landmarks.dat"));
+		std::string ShapePath = std::string(TCHAR_TO_UTF8(*ContentDir)) + "/Source/caffeemodels/shape_predictor_68_face_landmarks.dat";
 
-		StreamIn = std::ifstream(TCHAR_TO_UTF8(*ShapePath), std::ios::binary);
+		StreamIn = std::ifstream(ShapePath, std::ios::binary);
 
 
 		dlib::deserialize(landmark_detector_shape_predictor, StreamIn);
@@ -377,7 +374,7 @@ void AWebcamActor::ComputeHeadDataTick()
 
 	// Convert frame to blob, and drop into Face Box Detector Netowrk
 	cv::Mat blob, out;
-	blob = cv::dnn::blobFromImage(frame, 1.0, cv::Size(300, 300), (104, 117, 123), false, false);
+	blob = cv::dnn::blobFromImage(frame, 1.0, cv::Size(300, 300), (0, 0, 0), false, false);
 
 	box_detector_face_net.setInput(blob);
 	cv::Mat detection = box_detector_face_net.forward();
@@ -451,7 +448,7 @@ void AWebcamActor::ComputeHeadDataTick()
 		double focal_length = frame.cols;
 		cv::Point2d center = cv::Point2d(frame.cols / 2, frame.rows / 2);
 		cv::Mat camera_matrix = (cv::Mat_<double>(3, 3) << focal_length, 0, center.x, 0, focal_length, center.y, 0, 0, 1);
-		cv::Mat dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<double>::type);
+		cv::Mat dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<double>::type);// Assuming no lens distortion
 
 		// Output rotation and translation
 		cv::Mat rotation_vector;
@@ -460,6 +457,10 @@ void AWebcamActor::ComputeHeadDataTick()
 
 		// Solve for pose
 		cv::solvePnP(model_3D_compare_pts, image_points, camera_matrix, dist_coeffs, rotation_vector, translation_vector);
+
+		HeadLocation.X = -translation_vector.at<double>(0);
+		HeadLocation.Y = -translation_vector.at<double>(1);
+		HeadLocation.Z = -translation_vector.at<double>(2);
 
 		// Convert rotation to Matrix
 		cv::Rodrigues(rotation_vector, rot_mat);
@@ -503,6 +504,9 @@ void AWebcamActor::ComputeHeadDataTick()
 		cv::hconcat(rot_mat, translation_vector, pose_mat);
 		cv::decomposeProjectionMatrix(pose_mat, out_intrinsics, out_rotation, out_translation, cv::noArray(), cv::noArray(), cv::noArray(), euler_angle); //XYZ
 
+		//HeadLocation.X = -translation_vector.at<double>(0);
+		//HeadLocation.Y = -translation_vector.at<double>(1);
+		//HeadLocation.Z = -translation_vector.at<double>(2);
 
 		HeadRotator.Pitch = -euler_angle.at<double>(0);
 		HeadRotator.Yaw = -euler_angle.at<double>(1);
