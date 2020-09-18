@@ -1,4 +1,7 @@
 Requires 4.24+ UE4 engine (works with binary builds, or source builds)
 Run BUILD_DLIB and BUILD_OPENCV (you can run these as the same time for mutli core)
 Right click DeepMirror.uproject and select "Generate Visual Studio Project Files"
-Open the generated DeepMirror.sln, build and run
+Open the generated DeepMirror.sln
+right click "DeepMirror" solution and "set as startup"
+change the build from Win32, to Win64.
+build and run.
