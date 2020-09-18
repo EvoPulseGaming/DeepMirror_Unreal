@@ -19,7 +19,7 @@ AWebcamActor::AWebcamActor()
 	bDebugFaceLandmarks = true;
 	VideoSize = FVector2D(0, 0);
 	stream = cv::VideoCapture();
-	Frame = cv::Mat();
+	frame = cv::Mat();
 	gray = cv::Mat();
 	FrameToLightSize = cv::Mat();
 	LightEstimationFrame = cv::Mat();
@@ -28,17 +28,17 @@ AWebcamActor::AWebcamActor()
 	inputBlob = cv::Mat();
 
 
-	//FMemory::Free(&pose_model_shape_predictor);
-	//pose_model_shape_predictor
-	//FMemory::Free(&r);
+	//FMemory::Free(&landmark_detector_shape_predictor);
+	//landmark_detector_shape_predictor
+	//FMemory::Free(&face_rect);
 	detection = cv::Mat();
 	detectionMat = cv::Mat();
-	//FMemory::Free(&object_compare_pts);
-	//FMemory::Free(&image_pts);
+	//FMemory::Free(&model_3D_compare_pts);
+	//FMemory::Free(&image_landmarks_pts);
 	//FMemory::Free(&reprojectdst);
 	//FMemory::Free(&reprojectsrc);
 
-	//FMemory::Free(&net);
+	//FMemory::Free(&box_detector_face_net);
 
 	//FMemory::Free(&shapes);
 	//FMemory::Free(&shape);
@@ -67,7 +67,7 @@ AWebcamActor::~AWebcamActor()
 		isStreamOpen = false;
 
 		stream.release();
-		Frame.release();
+		frame.release();
 		gray.release();
 		FrameToLightSize.release();
 		LightEstimationFrame.release();
@@ -75,18 +75,18 @@ AWebcamActor::~AWebcamActor()
 		StreamIn.clear();
 		inputBlob.release();
 
-		//FMemory::Free(&pose_model_shape_predictor);
+		//FMemory::Free(&landmark_detector_shape_predictor);
 
-		//FMemory::Free(&r);
+		//FMemory::Free(&face_rect);
 
 		detection.release();
 		detectionMat.release();
-		object_compare_pts.clear();
-		image_pts.clear();
+		model_3D_compare_pts.clear();
+		//image_landmarks_pts.clear();
 		reprojectdst.clear();
 		reprojectsrc.clear();
 
-		//FMemory::Free(&net);
+		//FMemory::Free(&box_detector_face_net);
 
 		shapes.clear();
 		//FMemory::Free(&shape);
@@ -123,7 +123,7 @@ void AWebcamActor::BeginPlay()
 
 		isStreamOpen = true;
 		UpdateFrame();
-		VideoSize = FVector2D(Frame.cols, Frame.rows);
+		VideoSize = FVector2D(frame.cols, frame.rows);
 
 		VideoTexture = UTexture2D::CreateTransient(VideoSize.X, VideoSize.Y);
 		VideoTexture->UpdateResource();
@@ -150,8 +150,8 @@ void AWebcamActor::BeginPlay()
 
 
 
-		net = cv::dnn::readNetFromCaffe(proto, caffe);
-		if (net.empty())
+		box_detector_face_net = cv::dnn::readNetFromCaffe(proto, caffe);
+		if (box_detector_face_net.empty())
 		{
 			std::cerr << "Can't load network by using the following files: " << std::endl;
 			std::cerr << "prototxt:   " << proto << std::endl;
@@ -165,24 +165,31 @@ void AWebcamActor::BeginPlay()
 		StreamIn = std::ifstream(TCHAR_TO_UTF8(*ShapePath), std::ios::binary);
 
 
-		dlib::deserialize(pose_model_shape_predictor, StreamIn);
+		dlib::deserialize(landmark_detector_shape_predictor, StreamIn);
 
 
 		//fill in 3D ref points(world coordinates), model referenced from http://aifi.isr.uc.pt/Downloads/OpenGL/glAnthropometric3DModel.cpp
-		object_compare_pts.push_back(cv::Point3d(6.825897, 6.760612, 4.402142));     //#33 left brow left corner
-		object_compare_pts.push_back(cv::Point3d(1.330353, 7.122144, 6.903745));     //#29 left brow right corner
-		object_compare_pts.push_back(cv::Point3d(-1.330353, 7.122144, 6.903745));    //#34 right brow left corner
-		object_compare_pts.push_back(cv::Point3d(-6.825897, 6.760612, 4.402142));    //#38 right brow right corner
-		object_compare_pts.push_back(cv::Point3d(5.311432, 5.485328, 3.987654));     //#13 left eye left corner
-		object_compare_pts.push_back(cv::Point3d(1.789930, 5.393625, 4.413414));     //#17 left eye right corner
-		object_compare_pts.push_back(cv::Point3d(-1.789930, 5.393625, 4.413414));    //#25 right eye left corner
-		object_compare_pts.push_back(cv::Point3d(-5.311432, 5.485328, 3.987654));    //#21 right eye right corner
-		object_compare_pts.push_back(cv::Point3d(2.005628, 1.409845, 6.165652));     //#55 nose left corner
-		object_compare_pts.push_back(cv::Point3d(-2.005628, 1.409845, 6.165652));    //#49 nose right corner
-		object_compare_pts.push_back(cv::Point3d(2.774015, -2.080775, 5.048531));    //#43 mouth left corner
-		object_compare_pts.push_back(cv::Point3d(-2.774015, -2.080775, 5.048531));   //#39 mouth right corner
-		object_compare_pts.push_back(cv::Point3d(0.000000, -3.116408, 6.097667));    //#45 mouth central bottom corner
-		object_compare_pts.push_back(cv::Point3d(0.000000, -7.415691, 4.070434));    //#6 chin corner
+		//model_3D_compare_pts.push_back(cv::Point3d(6.825897, 6.760612, 4.402142));     //#33 left brow left corner
+		//model_3D_compare_pts.push_back(cv::Point3d(1.330353, 7.122144, 6.903745));     //#29 left brow right corner
+		//model_3D_compare_pts.push_back(cv::Point3d(-1.330353, 7.122144, 6.903745));    //#34 right brow left corner
+		//model_3D_compare_pts.push_back(cv::Point3d(-6.825897, 6.760612, 4.402142));    //#38 right brow right corner
+		//model_3D_compare_pts.push_back(cv::Point3d(5.311432, 5.485328, 3.987654));     //#13 left eye left corner
+		//model_3D_compare_pts.push_back(cv::Point3d(1.789930, 5.393625, 4.413414));     //#17 left eye right corner
+		//model_3D_compare_pts.push_back(cv::Point3d(-1.789930, 5.393625, 4.413414));    //#25 right eye left corner
+		//model_3D_compare_pts.push_back(cv::Point3d(-5.311432, 5.485328, 3.987654));    //#21 right eye right corner
+		//model_3D_compare_pts.push_back(cv::Point3d(2.005628, 1.409845, 6.165652));     //#55 nose left corner
+		//model_3D_compare_pts.push_back(cv::Point3d(-2.005628, 1.409845, 6.165652));    //#49 nose right corner
+		//model_3D_compare_pts.push_back(cv::Point3d(2.774015, -2.080775, 5.048531));    //#43 mouth left corner
+		//model_3D_compare_pts.push_back(cv::Point3d(-2.774015, -2.080775, 5.048531));   //#39 mouth right corner
+		//model_3D_compare_pts.push_back(cv::Point3d(0.000000, -3.116408, 6.097667));    //#45 mouth central bottom corner
+		//model_3D_compare_pts.push_back(cv::Point3d(0.000000, -7.415691, 4.070434));    //#6 chin corner
+
+		model_3D_compare_pts.push_back(cv::Point3d(0.0f, 0.0f, 60.f));               // Nose tip
+		model_3D_compare_pts.push_back(cv::Point3d(0.0f, -330.0f, -65.0f));          // Chin
+		model_3D_compare_pts.push_back(cv::Point3d(-225.0f, 170.0f, -135.0f));       // Left eye left corner
+		model_3D_compare_pts.push_back(cv::Point3d(225.0f, 170.0f, -135.0f));        // Right eye right corner
+		model_3D_compare_pts.push_back(cv::Point3d(-150.0f, -150.0f, -125.0f));      // Left Mouth corner
+		model_3D_compare_pts.push_back(cv::Point3d(150.0f, -150.0f, -125.0f));       // Right mouth corner
 
 
 		//result
@@ -242,7 +249,7 @@ void AWebcamActor::UpdateFrame()
 {
 	if (stream.isOpened())
 	{
-		stream.retrieve(Frame);
+		stream.retrieve(frame);
 	}
 	else
 	{
@@ -253,25 +260,25 @@ void AWebcamActor::UpdateFrame()
 
 void AWebcamActor::UpdateTexture()
 {
-	if (stream.isOpened() && Frame.data)
+	if (stream.isOpened() && frame.data)
 	{
 		for (int y = 0; y < VideoSize.Y; y++)
 		{
 			for (int x = 0; x < VideoSize.X; x++)
 			{
 				int i = x + (y * VideoSize.X);
-				CameraData[i].B = Frame.data[i * 3 + 0];
-				CameraData[i].G = Frame.data[i * 3 + 1];
-				CameraData[i].R = Frame.data[i * 3 + 2];
+				CameraData[i].B = frame.data[i * 3 + 0];
+				CameraData[i].G = frame.data[i * 3 + 1];
+				CameraData[i].R = frame.data[i * 3 + 2];
 			}
 		}
 
 		UpdateTextureRegions(VideoTexture, (int32)0, (uint32)1, VideoUpdateTextureRegion, (uint32)(4 * VideoSize.X), (uint32)4, (uint8*)CameraData.GetData(), false);
 
 
-		cv::resize(Frame, FrameToLightSize, cv::Size(xSizeLight, ySizeLight), cv::INTER_LANCZOS4);
+		cv::resize(frame, FrameToLightSize, cv::Size(xSizeLight, ySizeLight), cv::INTER_LANCZOS4);
 
-		//https://www.researchgate.net/publication/274640792_Illumination_Estimation_Based_Color_to_Grayscale_Conversion_Algorithms
+		//https://www.researchgate.box_detector_face_net/publication/274640792_Illumination_Estimation_Based_Color_to_Grayscale_Conversion_Algorithms
 
 		//at gray(src.size(), CV_8UC1, Scalar(0));
 
@@ -356,148 +363,151 @@ void AWebcamActor::UpdateTextureRegions(UTexture2D* Texture, int32 MipIndex, uin
 
 void AWebcamActor::ComputeHeadDataTick()
 {
+	int scale_ratio = 1;
 
-	if (stream.isOpened() && Frame.empty() && !Frame.data)
+
+	if (stream.isOpened() && frame.empty() && !frame.data)
 		return;
 
-	if (Frame.channels() == 4)
+	if (frame.channels() == 4)
 	{
-		cv::cvtColor(Frame, Frame, cv::COLOR_BGRA2BGR);
+		cv::cvtColor(frame, frame, cv::COLOR_BGRA2BGR);
 	}
 
-	float inScaleFactor = 1;
-	float meanVal = 1;
 
-	inputBlob = cv::dnn::blobFromImage(Frame, inScaleFactor, cv::Size(400, 300), meanVal, false, false);
+	// Convert frame to blob, and drop into Face Box Detector Netowrk
+	cv::Mat blob, out;
+	blob = cv::dnn::blobFromImage(frame, 1.0, cv::Size(300, 300), (104, 117, 123), false, false);
 
+	box_detector_face_net.setInput(blob);
+	cv::Mat detection = box_detector_face_net.forward();
+	cv::Mat detectionMat(detection.size[2], detection.size[3], CV_32F, detection.ptr<float>());
 
-	net.setInput(inputBlob, "data");
-	detection = net.forward("detection_out");
-	detectionMat = cv::Mat(detection.size[2], detection.size[3], CV_32F, detection.ptr<float>());
-
-
-	cv::resize(Frame, smallMat, cv::Size(), 1.0 / FACE_DOWNSAMPLE_RATIO, 1.0 / FACE_DOWNSAMPLE_RATIO);
-	dlib::cv_image<dlib::bgr_pixel> cimg(Frame);
-	dlib::cv_image<dlib::bgr_pixel> cimg_small(smallMat);
-
-
+	// Check results and only take the most confident prediction
+	float largest_conf = 0;
 	for (int i = 0; i < detectionMat.rows; i++)
 	{
 		float confidence = detectionMat.at<float>(i, 2);
-		float confidenceThreshold = 0.5f;
-		if (confidence > confidenceThreshold)
+
+		if (confidence > .5)
 		{
-			int x1 = static_cast<int>(detectionMat.at<float>(i, 3) * Frame.cols);
-			int y1 = static_cast<int>(detectionMat.at<float>(i, 4) * Frame.rows);
-			int x2 = static_cast<int>(detectionMat.at<float>(i, 5) * Frame.cols);
-			int y2 = static_cast<int>(detectionMat.at<float>(i, 6) * Frame.rows);
+			// Get dimensions
+			int x1 = static_cast<int>(detectionMat.at<float>(i, 3) * (frame.cols / scale_ratio));
+			int y1 = static_cast<int>(detectionMat.at<float>(i, 4) * (frame.rows / scale_ratio));
+			int x2 = static_cast<int>(detectionMat.at<float>(i, 5) * (frame.cols / scale_ratio));
+			int y2 = static_cast<int>(detectionMat.at<float>(i, 6) * (frame.rows / scale_ratio));
 
-			dlib::rectangle r(
-				static_cast<int>(detectionMat.at<float>(i, 3) * Frame.cols),
-				static_cast<int>(detectionMat.at<float>(i, 4) * Frame.rows),
-				static_cast<int>(detectionMat.at<float>(i, 5) * Frame.cols),
-				static_cast<int>(detectionMat.at<float>(i, 6) * Frame.rows)
-			);
+			// Generate square dimensions
+			int face_width = FMath::Max(x2 - x1, y2 - y1) / 2.8;
+			int center_x = ((x2 + x1) / 2);
+			int center_y = ((y2 + y1) / 2);
 
-			shape = pose_model_shape_predictor(cimg, r);
-
-
-
-			shapes.push_back(shape);
-
-
-
-			//Render square around face
-			cv::rectangle(Frame, cv::Point(x1, y1), cv::Point(x2, y2), cv::Scalar(0, 255, 0), 2, 4);
-			//draw features
-			for (unsigned int i = 0; i < 68; ++i)
+			if (run_count > 0)
 			{
-				cv::circle(Frame, cv::Point(shape.part(i).x(), shape.part(i).y()), 2, cv::Scalar(0, 0, 255), 2);
+				// Average the center of the box with the Nose (Works better for landmark detection)
+				center_x = int((center_x + prev_nose.x) / 2);
+				center_y = int((center_y + prev_nose.y) / 2);
 			}
 
+			// Apply square dimensions
+			dlib::point point_a(center_x - face_width, center_y - face_width);
+			dlib::point point_b(center_x + face_width, center_y + face_width);
+			dlib::rectangle new_face(point_a, point_b);
 
-
-
-			//fill in 2D ref points, annotations follow https://ibug.doc.ic.ac.uk/resources/300-W/
-			//2D ref points(image coordinates), referenced from detected facial feature
-			image_pts.push_back(cv::Point2d(shape.part(17).x(), shape.part(17).y())); //#17 left brow left corner
-			image_pts.push_back(cv::Point2d(shape.part(21).x(), shape.part(21).y())); //#21 left brow right corner
-			image_pts.push_back(cv::Point2d(shape.part(22).x(), shape.part(22).y())); //#22 right brow left corner
-			image_pts.push_back(cv::Point2d(shape.part(26).x(), shape.part(26).y())); //#26 right brow right corner
-			image_pts.push_back(cv::Point2d(shape.part(36).x(), shape.part(36).y())); //#36 left eye left corner
-			image_pts.push_back(cv::Point2d(shape.part(39).x(), shape.part(39).y())); //#39 left eye right corner
-			image_pts.push_back(cv::Point2d(shape.part(42).x(), shape.part(42).y())); //#42 right eye left corner
-			image_pts.push_back(cv::Point2d(shape.part(45).x(), shape.part(45).y())); //#45 right eye right corner
-			image_pts.push_back(cv::Point2d(shape.part(31).x(), shape.part(31).y())); //#31 nose left corner
-			image_pts.push_back(cv::Point2d(shape.part(35).x(), shape.part(35).y())); //#35 nose right corner
-			image_pts.push_back(cv::Point2d(shape.part(48).x(), shape.part(48).y())); //#48 mouth left corner
-			image_pts.push_back(cv::Point2d(shape.part(54).x(), shape.part(54).y())); //#54 mouth right corner
-			image_pts.push_back(cv::Point2d(shape.part(57).x(), shape.part(57).y())); //#57 mouth central bottom corner
-			image_pts.push_back(cv::Point2d(shape.part(8).x(), shape.part(8).y()));   //#8 chin corner
-
-			// Camera internals
-			focal_length = Frame.cols; // Approximate focal length.
-
-			center = cv::Point2d(Frame.cols / 2, Frame.rows / 2);
-
-			camera_matrix = (cv::Mat_<double>(3, 3) << focal_length, 0, center.x, 0, focal_length, center.y, 0, 0, 1);
-
-			dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<double>::type); // Assuming no lens distortion
-
-
-			// Solve for pose
-
-			cv::solvePnP(object_compare_pts, image_pts, camera_matrix, dist_coeffs, rotation_vector, translation_vector);
-
-
-			//rotation_vector is axis angle representation of rotation, which usually require 4 numbers, [v, theta], 
-			//but v is required to be unit vector, and thus it's length is encoded as theta, reducing the required numbers to 3
-
-
-			// Project a 3D point (0, 0, 1000.0) onto the image plane.
-			// We use this to draw a line sticking out of the nose
-			nose_end_point3D.push_back(cv::Point3d(0, 0, 1000.0));
-
-			projectPoints(nose_end_point3D, rotation_vector, translation_vector, camera_matrix, dist_coeffs, nose_end_point2D, cv::noArray(), 1);
-
-
-			HeadLocation.X = translation_vector.at<double>(0);
-			HeadLocation.Y = translation_vector.at<double>(1);
-			HeadLocation.Z = translation_vector.at<double>(2);
-
-			//All this just for rotation
-			cv::Rodrigues(rotation_vector, rotation_mat);
-			//UE4 = X Forward, Z Up, Y Right
-			
-
-			cv::hconcat(rotation_mat, translation_vector, pose_mat);
-			cv::decomposeProjectionMatrix(pose_mat, out_intrinsics, out_rotation, out_translation, cv::noArray(), cv::noArray(), cv::noArray(), euler_angle); //XYZ
-
-
-
-
-			
-			//y_rot = asin(rotation_mat[2][0])
-			//	x_rot = acos(rotation_mat[2][2] / math.cos(y_rot))
-			//	z_rot = acos(rotation_mat[0][0] / math.cos(y_rot))
-			//	y_rot_angle = y_rot * (180 / 3.1415)
-			//	x_rot_angle = x_rot * (180 / 3.1415)
-			//	z_rot_angle = z_rot * (180 / 3.1415)
-
-
-			HeadRotator.Pitch = -euler_angle.at<double>(0);
-			HeadRotator.Yaw = euler_angle.at<double>(1);
-			HeadRotator.Roll = -euler_angle.at<double>(2);
-
-
-
-
-			image_pts.clear();
-			shapes.clear();
-			nose_end_point3D.clear();
-
+			if (confidence > largest_conf)
+			{
+				largest_conf = confidence;
+				face_rect = new_face;
+			}
 
 		}
+	}
+
+	//Only run this if we detect something
+	if (largest_conf > 0)
+	{
+		run_count += 1;
+
+		// Run landmark detection
+		cv::Mat half_frame(frame.rows / scale_ratio, frame.cols / scale_ratio, frame.type());
+		cv::resize(frame, half_frame, half_frame.size(), cv::INTER_CUBIC);
+		dlib::cv_image<dlib::bgr_pixel> dlib_image(half_frame);
+		dlib::full_object_detection face_landmark;
+		face_landmark = landmark_detector_shape_predictor(dlib_image, face_rect);
+
+		// Store nose point
+		prev_nose = cv::Point2f(face_landmark.part(34).x(), face_landmark.part(34).y());
+
+		// Prepair face points for perspective solve
+		std::vector<cv::Point2d> image_points;
+		image_points.push_back(cv::Point2d(face_landmark.part(30).x() * scale_ratio, face_landmark.part(30).y() * scale_ratio));    // Nose tip
+		image_points.push_back(cv::Point2d(face_landmark.part(8).x() * scale_ratio, face_landmark.part(8).y() * scale_ratio));      // Chin
+		image_points.push_back(cv::Point2d(face_landmark.part(36).x() * scale_ratio, face_landmark.part(36).y() * scale_ratio));    // Left eye left corner
+		image_points.push_back(cv::Point2d(face_landmark.part(45).x() * scale_ratio, face_landmark.part(45).y() * scale_ratio));    // Right eye right corner
+		image_points.push_back(cv::Point2d(face_landmark.part(48).x() * scale_ratio, face_landmark.part(48).y() * scale_ratio));    // Left Mouth corner
+		image_points.push_back(cv::Point2d(face_landmark.part(54).x() * scale_ratio, face_landmark.part(54).y() * scale_ratio));    // Right mouth corner
+
+		// Generate fake camera Matrix
+		double focal_length = frame.cols;
+		cv::Point2d center = cv::Point2d(frame.cols / 2, frame.rows / 2);
+		cv::Mat camera_matrix = (cv::Mat_<double>(3, 3) << focal_length, 0, center.x, 0, focal_length, center.y, 0, 0, 1);
+		cv::Mat dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<double>::type);
+
+		// Output rotation and translation
+		cv::Mat rotation_vector;
+		cv::Mat translation_vector;
+		cv::Mat rot_mat;
+
+		// Solve for pose
+		cv::solvePnP(model_3D_compare_pts, image_points, camera_matrix, dist_coeffs, rotation_vector, translation_vector);
+
+		// Convert rotation to Matrix
+		cv::Rodrigues(rotation_vector, rot_mat);
+
+		//cv::Mat identity = (cv::Mat_<double>(3, 3) <<
+		//	1, 0, 0,
+		//	0, -1, 0,
+		//	0, 0, -1);
+
+		//rot_mat = rot_mat * identity * rot_mat;
+		//FMatrix ConvertRotationMatrix = FMatrix(
+		//	FPlane(0, 0, 1, 0),//x to y
+		//	FPlane(1, 0, 0, 0),//y to -z
+		//	FPlane(0, -1, 0, 0),
+		//	FPlane(0, 0, 0, 1));
+
+		//FMatrix ViewRotationMatrix = FMatrix(
+		//	FPlane(rot_mat.at<double>(0), rot_mat.at<double>(1), rot_mat.at<double>(2), 0),
+		//	FPlane(rot_mat.at<double>(3), rot_mat.at<double>(4), rot_mat.at<double>(5), 0),
+		//	FPlane(rot_mat.at<double>(6), rot_mat.at<double>(7), rot_mat.at<double>(8), 0),
+		//	FPlane(0, 0, 0, 1));
+
+		//FMatrix ConvertedMatrix = ConvertRotationMatrix * ViewRotationMatrix * ConvertRotationMatrix;
+
+
+		//HeadRotator = ConvertedMatrix.Rotator();
+
+
+
+		// Export transform
+		//outFaces = TransformData(translation_vector.at<double>(0), translation_vector.at<double>(1), translation_vector.at<double>(2),
+		//	rot_mat.at<double>(2, 0), rot_mat.at<double>(2, 1), rot_mat.at<double>(2, 2),
+		//	rot_mat.at<double>(1, 0), rot_mat.at<double>(1, 1), rot_mat.at<double>(1, 2));
+
+
+
+		//OPENCV =	right-handed	(+X: right,		+Y: down,	+Z: forward)
+		//UE4	 =	left-handed		(+X: forward,	+Y: right,	+Z: up)
+
+
+		cv::hconcat(rot_mat, translation_vector, pose_mat);
+		cv::decomposeProjectionMatrix(pose_mat, out_intrinsics, out_rotation, out_translation, cv::noArray(), cv::noArray(), cv::noArray(), euler_angle); //XYZ
+
+
+		HeadRotator.Pitch = -euler_angle.at<double>(0);
+		HeadRotator.Yaw = -euler_angle.at<double>(1);
+		HeadRotator.Roll = -euler_angle.at<double>(2);
+
 
 	}
 
@@ -511,7 +521,7 @@ void AWebcamActor::EndPlay(EEndPlayReason::Type reasonType)
 		isStreamOpen = false;
 
 		stream.release();
-		Frame.release();
+		frame.release();
 		gray.release();
 		FrameToLightSize.release();
 		LightEstimationFrame.release();
@@ -519,18 +529,18 @@ void AWebcamActor::EndPlay(EEndPlayReason::Type reasonType)
 		StreamIn.clear();
 		inputBlob.release();
 
-		//FMemory::Free(&pose_model_shape_predictor);
+		//FMemory::Free(&landmark_detector_shape_predictor);
 
-		//FMemory::Free(&r);
+		//FMemory::Free(&face_rect);
 
 		detection.release();
 		detectionMat.release();
-		object_compare_pts.clear();
-		image_pts.clear();
+		model_3D_compare_pts.clear();
+		//image_landmarks_pts.clear();
 		reprojectdst.clear();
 		reprojectsrc.clear();
 
-		//FMemory::Free(&net);
+		//FMemory::Free(&box_detector_face_net);
 
 		shapes.clear();
 		//FMemory::Free(&shape);

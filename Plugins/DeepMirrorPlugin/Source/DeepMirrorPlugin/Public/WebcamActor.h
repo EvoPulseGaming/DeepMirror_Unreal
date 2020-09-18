@@ -54,7 +54,7 @@ public:
 
 
 	// OpenCV fields
-	cv::Mat Frame;
+	cv::Mat frame;
 	cv::Mat gray;
 	cv::Mat FrameToLightSize;
 	cv::Mat LightEstimationFrame;
@@ -130,7 +130,11 @@ public:
 	UPROPERTY(EditAnywhere, Category = "FaceDetection")
 		int FACE_DOWNSAMPLE_RATIO = 2;
 
-	int UpdateCount = 0;
+	int run_count = 0;
+
+	cv::Point2f prev_nose;
+
+
 
 	//file reader for dnn network
 	std::ifstream StreamIn;
@@ -138,8 +142,8 @@ public:
 	cv::Mat inputBlob;
 
 	//face detection
-	dlib::shape_predictor pose_model_shape_predictor;
-	dlib::rectangle r;
+	dlib::shape_predictor landmark_detector_shape_predictor;
+	dlib::rectangle face_rect;
 	std::vector<dlib::full_object_detection> shapes;
 	dlib::full_object_detection shape;
 
@@ -152,16 +156,16 @@ public:
 
 
 	//fill in 3D ref points(world coordinates), model referenced from http://aifi.isr.uc.pt/Downloads/OpenGL/glAnthropometric3DModel.cpp
-	std::vector<cv::Point3d> object_compare_pts;
+	std::vector<cv::Point3d> model_3D_compare_pts;
 
 	//2D ref points(image coordinates), referenced from detected facial feature
-	std::vector<cv::Point2d> image_pts;
+	//std::vector<cv::Point2d> image_landmarks_pts;
 	//reprojected 2D points
 	std::vector<cv::Point2d> reprojectdst;
 	//reproject 3D points world coordinate axis to verify result pose
 	std::vector<cv::Point3d> reprojectsrc;
 
-	cv::dnn::Net net;
+	cv::dnn::Net box_detector_face_net;
 
 
 	double focal_length;
