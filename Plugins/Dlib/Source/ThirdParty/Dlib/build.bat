@@ -55,8 +55,8 @@ popd
 echo Cleaning up
 :: Clean up destination directories
 @ECHO ON
-md %bin_path%\Win32
-md %bin_path%\Win64
+REM md %bin_path%\Win32
+REM md %bin_path%\Win64
 
 ::Copy to plugin dir
 md ..\..\..\Libraries\Win32
