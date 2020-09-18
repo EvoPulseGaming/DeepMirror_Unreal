@@ -1,1 +1,1 @@
-Plugins\Dlib\Source\ThirdParty\Dlib
+Plugins\Dlib\Source\ThirdParty\Dlib\build.bat
