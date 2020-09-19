@@ -33,7 +33,6 @@ public class DeepMirrorPlugin : ModuleRules
 			new string[] {
 				// ... add public include paths required here ...
                 Path.Combine(ModuleDirectory, "Public"),
-				Path.Combine(ModuleDirectory, "Classes"),
 				Path.Combine(ModuleDirectory, "../libfacedetection/include"),
 			}
 			);
