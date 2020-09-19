@@ -1,3 +1,9 @@
+@echo off
+setlocal
+:PROMPT
+set /p var=Are you sure you want to clean the project and all plugins?[Y/N]: 
+if /I not %var%== Y exit
+
 del /q/s *".sln"
 
 rmdir /q/s ".vs"
@@ -30,3 +36,5 @@ rmdir /q/s "Plugins/OpenCV/Source/ThirdParty/OpenCV/etc"
 rmdir /q/s "Plugins/OpenCV/Source/ThirdParty/OpenCV/python"
 rmdir /q/s "Plugins/OpenCV/Source/ThirdParty/OpenCV/build/opencv-4.4.0"
 rmdir /q/s "Plugins/OpenCV/Source/ThirdParty/OpenCV/build/opencv_contrib-4.4.0"
+
+endlocal
