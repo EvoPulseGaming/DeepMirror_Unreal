@@ -5,6 +5,7 @@
 #include "OpenCV_Common.h"
 #include "RHI.h"
 #include "Math/IntRect.h"
+#include "PnPProblem.h"
 #include "WebcamActor.generated.h"
 
 USTRUCT()
@@ -33,6 +34,9 @@ public:
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+
+
 
 	// Called every frame
 	virtual void Tick(float DeltaSeconds) override;
@@ -156,26 +160,24 @@ public:
 
 
 	//fill in 3D ref points(world coordinates), model referenced from http://aifi.isr.uc.pt/Downloads/OpenGL/glAnthropometric3DModel.cpp
-	std::vector<cv::Point3d> model_3D_compare_pts;
+	std::vector<cv::Point3f> model_3D_compare_pts;
 
 	//2D ref points(image coordinates), referenced from detected facial feature
-	//std::vector<cv::Point2d> image_landmarks_pts;
+	//std::vector<cv::Point2f> image_landmarks_pts;
 	//reprojected 2D points
-	std::vector<cv::Point2d> reprojectdst;
+	std::vector<cv::Point2f> reprojectdst;
 	//reproject 3D points world coordinate axis to verify result pose
-	std::vector<cv::Point3d> reprojectsrc;
+	std::vector<cv::Point3f> reprojectsrc;
 
 	cv::dnn::Net box_detector_face_net;
 
 
-	double focal_length;
-	cv::Point2d center;
-	cv::Mat camera_matrix;
+
 	cv::Mat dist_coeffs;
 	cv::Mat rotation_vector; // Rotation in axis-angle form
 	cv::Mat translation_vector;
-	std::vector<cv::Point3d> nose_end_point3D;
-	std::vector<cv::Point2d> nose_end_point2D;
+	std::vector<cv::Point3f> nose_end_point3D;
+	std::vector<cv::Point2f> nose_end_point2D;
 
 
 	cv::Mat rotation_mat;//3 x 3 R
@@ -192,6 +194,42 @@ public:
 	cv::Mat out_translation;
 
 	bool bMemoryReleased;
+
+	//kalman filter
+	double deltaT = 0.01, omega_w = 8, omega_u = 3.1623;
+	cv::KalmanFilter KF;
+	cv::Mat_<float> measurement;
+
+	cv::Mat measurements;
+
+
+
+
+
+
+
+	void fillMeasurements(cv::Mat & measurements, const cv::Mat & translation_measured, const cv::Mat & rotation_measured);
+
+	cv::Mat rot2euler(const cv::Mat & rotationMatrix);
+
+	cv::Mat euler2rot(const cv::Mat & euler);
+
+	void updateKalmanFilter(cv::KalmanFilter & KF, cv::Mat & measurement, cv::Mat & translation_estimated, cv::Mat & rotation_estimated);
+
+	void set_P_matrix(const cv::Mat & R_matrix, const cv::Mat & t_matrix);
+
+	cv::Point2f backproject3DPoint(const cv::Point3f & point3d);
+
+	void draw3DCoordinateAxes(cv::Mat image, const std::vector<cv::Point2f>& list_points2d);
+
+	void drawArrow(cv::Mat image, cv::Point2i p, cv::Point2i q, cv::Scalar color, int arrowMagnitude, int thickness, int line_type, int shift);
+
+	void initKalmanFilter(cv::KalmanFilter & KF, int nStates, int nMeasurements, int nInputs, double dt);
+
+
+
+	PnPProblem pnp_detection;
+	PnPProblem pnp_detection_est;
 
 
 protected:

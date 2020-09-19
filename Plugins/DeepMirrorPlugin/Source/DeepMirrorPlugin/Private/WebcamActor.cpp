@@ -44,10 +44,8 @@ AWebcamActor::AWebcamActor()
 	//FMemory::Free(&shape);
 	//FMemory::Free(&center);
 
-	camera_matrix = cv::Mat();
-	dist_coeffs = cv::Mat();
 	rotation_vector = cv::Mat();
-	translation_vector = cv::Mat();
+
 	nose_end_point3D.empty();
 	nose_end_point2D.empty();
 	rotation_mat = cv::Mat();
@@ -56,6 +54,10 @@ AWebcamActor::AWebcamActor()
 	out_intrinsics = cv::Mat();
 	out_rotation = cv::Mat();
 	out_translation = cv::Mat();
+
+
+
+
 
 
 }
@@ -92,10 +94,9 @@ AWebcamActor::~AWebcamActor()
 		//FMemory::Free(&shape);
 		//FMemory::Free(&center);
 
-		camera_matrix.release();
-		dist_coeffs.release();
+
 		rotation_vector.release();
-		translation_vector.release();
+
 		nose_end_point3D.clear();
 		nose_end_point2D.clear();
 		rotation_mat.release();
@@ -166,27 +167,27 @@ void AWebcamActor::BeginPlay()
 
 
 		//fill in 3D ref points(world coordinates), model referenced from http://aifi.isr.uc.pt/Downloads/OpenGL/glAnthropometric3DModel.cpp
-		//model_3D_compare_pts.push_back(cv::Point3d(6.825897, 6.760612, 4.402142));     //#33 left brow left corner
-		//model_3D_compare_pts.push_back(cv::Point3d(1.330353, 7.122144, 6.903745));     //#29 left brow right corner
-		//model_3D_compare_pts.push_back(cv::Point3d(-1.330353, 7.122144, 6.903745));    //#34 right brow left corner
-		//model_3D_compare_pts.push_back(cv::Point3d(-6.825897, 6.760612, 4.402142));    //#38 right brow right corner
-		//model_3D_compare_pts.push_back(cv::Point3d(5.311432, 5.485328, 3.987654));     //#13 left eye left corner
-		//model_3D_compare_pts.push_back(cv::Point3d(1.789930, 5.393625, 4.413414));     //#17 left eye right corner
-		//model_3D_compare_pts.push_back(cv::Point3d(-1.789930, 5.393625, 4.413414));    //#25 right eye left corner
-		//model_3D_compare_pts.push_back(cv::Point3d(-5.311432, 5.485328, 3.987654));    //#21 right eye right corner
-		//model_3D_compare_pts.push_back(cv::Point3d(2.005628, 1.409845, 6.165652));     //#55 nose left corner
-		//model_3D_compare_pts.push_back(cv::Point3d(-2.005628, 1.409845, 6.165652));    //#49 nose right corner
-		//model_3D_compare_pts.push_back(cv::Point3d(2.774015, -2.080775, 5.048531));    //#43 mouth left corner
-		//model_3D_compare_pts.push_back(cv::Point3d(-2.774015, -2.080775, 5.048531));   //#39 mouth right corner
-		//model_3D_compare_pts.push_back(cv::Point3d(0.000000, -3.116408, 6.097667));    //#45 mouth central bottom corner
-		//model_3D_compare_pts.push_back(cv::Point3d(0.000000, -7.415691, 4.070434));    //#6 chin corner
+		//model_3D_compare_pts.push_back(cv::Point3f(6.825897, 6.760612, 4.402142));     //#33 left brow left corner
+		//model_3D_compare_pts.push_back(cv::Point3f(1.330353, 7.122144, 6.903745));     //#29 left brow right corner
+		//model_3D_compare_pts.push_back(cv::Point3f(-1.330353, 7.122144, 6.903745));    //#34 right brow left corner
+		//model_3D_compare_pts.push_back(cv::Point3f(-6.825897, 6.760612, 4.402142));    //#38 right brow right corner
+		//model_3D_compare_pts.push_back(cv::Point3f(5.311432, 5.485328, 3.987654));     //#13 left eye left corner
+		//model_3D_compare_pts.push_back(cv::Point3f(1.789930, 5.393625, 4.413414));     //#17 left eye right corner
+		//model_3D_compare_pts.push_back(cv::Point3f(-1.789930, 5.393625, 4.413414));    //#25 right eye left corner
+		//model_3D_compare_pts.push_back(cv::Point3f(-5.311432, 5.485328, 3.987654));    //#21 right eye right corner
+		//model_3D_compare_pts.push_back(cv::Point3f(2.005628, 1.409845, 6.165652));     //#55 nose left corner
+		//model_3D_compare_pts.push_back(cv::Point3f(-2.005628, 1.409845, 6.165652));    //#49 nose right corner
+		//model_3D_compare_pts.push_back(cv::Point3f(2.774015, -2.080775, 5.048531));    //#43 mouth left corner
+		//model_3D_compare_pts.push_back(cv::Point3f(-2.774015, -2.080775, 5.048531));   //#39 mouth right corner
+		//model_3D_compare_pts.push_back(cv::Point3f(0.000000, -3.116408, 6.097667));    //#45 mouth central bottom corner
+		//model_3D_compare_pts.push_back(cv::Point3f(0.000000, -7.415691, 4.070434));    //#6 chin corner
 
-		model_3D_compare_pts.push_back(cv::Point3d(0.0f, 0.0f, 60.f));               // Nose tip
-		model_3D_compare_pts.push_back(cv::Point3d(0.0f, -330.0f, -65.0f));          // Chin
-		model_3D_compare_pts.push_back(cv::Point3d(-225.0f, 170.0f, -135.0f));       // Left eye left corner
-		model_3D_compare_pts.push_back(cv::Point3d(225.0f, 170.0f, -135.0f));        // Right eye right corner
-		model_3D_compare_pts.push_back(cv::Point3d(-150.0f, -150.0f, -125.0f));      // Left Mouth corner
-		model_3D_compare_pts.push_back(cv::Point3d(150.0f, -150.0f, -125.0f));       // Right mouth corner
+		model_3D_compare_pts.push_back(cv::Point3f(0.0f, 0.0f, 60.f));               // Nose tip
+		model_3D_compare_pts.push_back(cv::Point3f(0.0f, -330.0f, -65.0f));          // Chin
+		model_3D_compare_pts.push_back(cv::Point3f(-225.0f, 170.0f, -135.0f));       // Left eye left corner
+		model_3D_compare_pts.push_back(cv::Point3f(225.0f, 170.0f, -135.0f));        // Right eye right corner
+		model_3D_compare_pts.push_back(cv::Point3f(-150.0f, -150.0f, -125.0f));      // Left Mouth corner
+		model_3D_compare_pts.push_back(cv::Point3f(150.0f, -150.0f, -125.0f));       // Right mouth corner
 
 
 		//result
@@ -194,14 +195,14 @@ void AWebcamActor::BeginPlay()
 		euler_angle = cv::Mat(3, 1, CV_64FC1);
 
 		//reproject 3D points world coordinate axis to verify result pose
-		reprojectsrc.push_back(cv::Point3d(10.0, 10.0, 10.0));
-		reprojectsrc.push_back(cv::Point3d(10.0, 10.0, -10.0));
-		reprojectsrc.push_back(cv::Point3d(10.0, -10.0, -10.0));
-		reprojectsrc.push_back(cv::Point3d(10.0, -10.0, 10.0));
-		reprojectsrc.push_back(cv::Point3d(-10.0, 10.0, 10.0));
-		reprojectsrc.push_back(cv::Point3d(-10.0, 10.0, -10.0));
-		reprojectsrc.push_back(cv::Point3d(-10.0, -10.0, -10.0));
-		reprojectsrc.push_back(cv::Point3d(-10.0, -10.0, 10.0));
+		reprojectsrc.push_back(cv::Point3f(10.0, 10.0, 10.0));
+		reprojectsrc.push_back(cv::Point3f(10.0, 10.0, -10.0));
+		reprojectsrc.push_back(cv::Point3f(10.0, -10.0, -10.0));
+		reprojectsrc.push_back(cv::Point3f(10.0, -10.0, 10.0));
+		reprojectsrc.push_back(cv::Point3f(-10.0, 10.0, 10.0));
+		reprojectsrc.push_back(cv::Point3f(-10.0, 10.0, -10.0));
+		reprojectsrc.push_back(cv::Point3f(-10.0, -10.0, -10.0));
+		reprojectsrc.push_back(cv::Point3f(-10.0, -10.0, 10.0));
 
 		//reprojected 2D points
 
@@ -214,6 +215,44 @@ void AWebcamActor::BeginPlay()
 
 		// Do first frame
 		//UpdateTexture();
+
+
+		//kalman filter
+		int nStates = 18;            // the number of states
+		int nMeasurements = 6;       // the number of measured states
+		int nInputs = 0;             // the number of action control
+		double dt = 0.125;           // time between measurements (1/FPS)
+		// instantiate Kalman Filter
+		initKalmanFilter(KF, nStates, nMeasurements, nInputs, dt);    // init function
+		measurements = cv::Mat(nMeasurements, 1, CV_64FC1);
+		measurements.setTo(cv::Scalar(0));
+
+
+
+
+
+		// Generate fake camera Matrix
+		//double focal_length = frame.cols;
+		//cv::Point2f center = cv::Point2f(frame.cols / 2, frame.rows / 2);
+		//cv::Mat camera_matrix = (cv::Mat_<double>(3, 3) << focal_length, 0, center.x, 0, focal_length, center.y, 0, 0, 1);
+		//cv::Mat distCoeffs = cv::Mat::zeros(4, 1, CV_64FC1); // Assuming no lens distortion
+
+			// Intrinsic camera parameters: UVC WEBCAM
+		double f = 55;                           // focal length in mm
+		double sx = 22.3, sy = 14.9;             // sensor size
+		double width = 640, height = 480;        // image size
+
+		double params_WEBCAM[] = { width*f / sx,   // fx
+								   height*f / sy,  // fy
+								   width / 2,      // cx
+								   height / 2 };    // cy
+
+		pnp_detection.init(params_WEBCAM);
+		pnp_detection_est.init(params_WEBCAM);
+
+
+
+
 	}
 	else
 	{
@@ -222,6 +261,68 @@ void AWebcamActor::BeginPlay()
 
 	GetWorldTimerManager().SetTimer(timerHandle, this, &AWebcamActor::CameraTimerTick, 0.08f, true, 3);
 
+}
+
+
+
+void AWebcamActor::initKalmanFilter(cv::KalmanFilter &KF, int nStates, int nMeasurements, int nInputs, double dt)
+{
+	KF.init(nStates, nMeasurements, nInputs, CV_64F);                 // init Kalman Filter
+	cv::setIdentity(KF.processNoiseCov, cv::Scalar::all(1e-5));       // set process noise
+	cv::setIdentity(KF.measurementNoiseCov, cv::Scalar::all(1e-4));   // set measurement noise
+	cv::setIdentity(KF.errorCovPost, cv::Scalar::all(1));             // error covariance
+				   /* DYNAMIC MODEL */
+	//  [1 0 0 dt  0  0 dt2   0   0 0 0 0  0  0  0   0   0   0]
+	//  [0 1 0  0 dt  0   0 dt2   0 0 0 0  0  0  0   0   0   0]
+	//  [0 0 1  0  0 dt   0   0 dt2 0 0 0  0  0  0   0   0   0]
+	//  [0 0 0  1  0  0  dt   0   0 0 0 0  0  0  0   0   0   0]
+	//  [0 0 0  0  1  0   0  dt   0 0 0 0  0  0  0   0   0   0]
+	//  [0 0 0  0  0  1   0   0  dt 0 0 0  0  0  0   0   0   0]
+	//  [0 0 0  0  0  0   1   0   0 0 0 0  0  0  0   0   0   0]
+	//  [0 0 0  0  0  0   0   1   0 0 0 0  0  0  0   0   0   0]
+	//  [0 0 0  0  0  0   0   0   1 0 0 0  0  0  0   0   0   0]
+	//  [0 0 0  0  0  0   0   0   0 1 0 0 dt  0  0 dt2   0   0]
+	//  [0 0 0  0  0  0   0   0   0 0 1 0  0 dt  0   0 dt2   0]
+	//  [0 0 0  0  0  0   0   0   0 0 0 1  0  0 dt   0   0 dt2]
+	//  [0 0 0  0  0  0   0   0   0 0 0 0  1  0  0  dt   0   0]
+	//  [0 0 0  0  0  0   0   0   0 0 0 0  0  1  0   0  dt   0]
+	//  [0 0 0  0  0  0   0   0   0 0 0 0  0  0  1   0   0  dt]
+	//  [0 0 0  0  0  0   0   0   0 0 0 0  0  0  0   1   0   0]
+	//  [0 0 0  0  0  0   0   0   0 0 0 0  0  0  0   0   1   0]
+	//  [0 0 0  0  0  0   0   0   0 0 0 0  0  0  0   0   0   1]
+	// position
+	KF.transitionMatrix.at<double>(0, 3) = dt;
+	KF.transitionMatrix.at<double>(1, 4) = dt;
+	KF.transitionMatrix.at<double>(2, 5) = dt;
+	KF.transitionMatrix.at<double>(3, 6) = dt;
+	KF.transitionMatrix.at<double>(4, 7) = dt;
+	KF.transitionMatrix.at<double>(5, 8) = dt;
+	KF.transitionMatrix.at<double>(0, 6) = 0.5*pow(dt, 2);
+	KF.transitionMatrix.at<double>(1, 7) = 0.5*pow(dt, 2);
+	KF.transitionMatrix.at<double>(2, 8) = 0.5*pow(dt, 2);
+	// orientation
+	KF.transitionMatrix.at<double>(9, 12) = dt;
+	KF.transitionMatrix.at<double>(10, 13) = dt;
+	KF.transitionMatrix.at<double>(11, 14) = dt;
+	KF.transitionMatrix.at<double>(12, 15) = dt;
+	KF.transitionMatrix.at<double>(13, 16) = dt;
+	KF.transitionMatrix.at<double>(14, 17) = dt;
+	KF.transitionMatrix.at<double>(9, 15) = 0.5*pow(dt, 2);
+	KF.transitionMatrix.at<double>(10, 16) = 0.5*pow(dt, 2);
+	KF.transitionMatrix.at<double>(11, 17) = 0.5*pow(dt, 2);
+	/* MEASUREMENT MODEL */
+//  [1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
+//  [0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
+//  [0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
+//  [0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0]
+//  [0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0]
+//  [0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0]
+	KF.measurementMatrix.at<double>(0, 0) = 1;  // x
+	KF.measurementMatrix.at<double>(1, 1) = 1;  // y
+	KF.measurementMatrix.at<double>(2, 2) = 1;  // z
+	KF.measurementMatrix.at<double>(3, 9) = 1;  // roll
+	KF.measurementMatrix.at<double>(4, 10) = 1; // pitch
+	KF.measurementMatrix.at<double>(5, 11) = 1; // yaw
 }
 
 void AWebcamActor::Tick(float DeltaTime)
@@ -436,41 +537,62 @@ void AWebcamActor::ComputeHeadDataTick()
 		prev_nose = cv::Point2f(face_landmark.part(34).x(), face_landmark.part(34).y());
 
 		// Prepair face points for perspective solve
-		std::vector<cv::Point2d> image_points;
-		image_points.push_back(cv::Point2d(face_landmark.part(30).x() * scale_ratio, face_landmark.part(30).y() * scale_ratio));    // Nose tip
-		image_points.push_back(cv::Point2d(face_landmark.part(8).x() * scale_ratio, face_landmark.part(8).y() * scale_ratio));      // Chin
-		image_points.push_back(cv::Point2d(face_landmark.part(36).x() * scale_ratio, face_landmark.part(36).y() * scale_ratio));    // Left eye left corner
-		image_points.push_back(cv::Point2d(face_landmark.part(45).x() * scale_ratio, face_landmark.part(45).y() * scale_ratio));    // Right eye right corner
-		image_points.push_back(cv::Point2d(face_landmark.part(48).x() * scale_ratio, face_landmark.part(48).y() * scale_ratio));    // Left Mouth corner
-		image_points.push_back(cv::Point2d(face_landmark.part(54).x() * scale_ratio, face_landmark.part(54).y() * scale_ratio));    // Right mouth corner
+		std::vector<cv::Point2f> image_points;
+		image_points.push_back(cv::Point2f(face_landmark.part(30).x() * scale_ratio, face_landmark.part(30).y() * scale_ratio));    // Nose tip
+		image_points.push_back(cv::Point2f(face_landmark.part(8).x() * scale_ratio, face_landmark.part(8).y() * scale_ratio));      // Chin
+		image_points.push_back(cv::Point2f(face_landmark.part(36).x() * scale_ratio, face_landmark.part(36).y() * scale_ratio));    // Left eye left corner
+		image_points.push_back(cv::Point2f(face_landmark.part(45).x() * scale_ratio, face_landmark.part(45).y() * scale_ratio));    // Right eye right corner
+		image_points.push_back(cv::Point2f(face_landmark.part(48).x() * scale_ratio, face_landmark.part(48).y() * scale_ratio));    // Left Mouth corner
+		image_points.push_back(cv::Point2f(face_landmark.part(54).x() * scale_ratio, face_landmark.part(54).y() * scale_ratio));    // Right mouth corner
 
-		// Generate fake camera Matrix
-		double focal_length = frame.cols;
-		cv::Point2d center = cv::Point2d(frame.cols / 2, frame.rows / 2);
-		cv::Mat camera_matrix = (cv::Mat_<double>(3, 3) << focal_length, 0, center.x, 0, focal_length, center.y, 0, 0, 1);
-		cv::Mat dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<double>::type);// Assuming no lens distortion
+
 
 		// Output rotation and translation
-		cv::Mat rotation_vector;
-		cv::Mat translation_vector;
-		cv::Mat rot_mat;
+
+		cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);
+		cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64FC1);
+
+		bool useExtrinsicGuess = false;
 
 		// Solve for pose
-		cv::solvePnP(model_3D_compare_pts, image_points, camera_matrix, dist_coeffs, rotation_vector, translation_vector);
+		int pnpMethod = cv::SOLVEPNP_ITERATIVE;
+		pnp_detection.estimatePose(model_3D_compare_pts, image_points, pnpMethod);
 
-		HeadLocation.X = -translation_vector.at<double>(0);
-		HeadLocation.Y = -translation_vector.at<double>(1);
-		HeadLocation.Z = -translation_vector.at<double>(2);
+		// -- Step 5: Kalman Filter
+		// GOOD MEASUREMENT
+
+				// Get the measured translation
+		cv::Mat translation_measured = pnp_detection.get_t_matrix();
+
+		// Get the measured rotation
+		cv::Mat rotation_measured = pnp_detection.get_R_matrix();
+
+		// fill the measurements vector
+		fillMeasurements(measurements, translation_measured, rotation_measured);
+
+
+		// update the Kalman filter with good measurements, otherwise with previous valid measurements
+		cv::Mat translation_estimated(3, 1, CV_64FC1);
+		cv::Mat rotation_estimated(3, 3, CV_64FC1);
+		updateKalmanFilter(KF, measurements,
+			translation_estimated, rotation_estimated);
+
+		// -- Step 6: Set estimated projection matrix
+		pnp_detection_est.set_P_matrix(rotation_estimated, translation_estimated);
+
+		HeadLocation.X = -tvec.at<double>(0);
+		HeadLocation.Y = -tvec.at<double>(1);
+		HeadLocation.Z = -tvec.at<double>(2);
 
 		// Convert rotation to Matrix
-		cv::Rodrigues(rotation_vector, rot_mat);
+
 
 		//cv::Mat identity = (cv::Mat_<double>(3, 3) <<
 		//	1, 0, 0,
 		//	0, -1, 0,
 		//	0, 0, -1);
 
-		//rot_mat = rot_mat * identity * rot_mat;
+		//R_matrix = R_matrix * identity * R_matrix;
 		//FMatrix ConvertRotationMatrix = FMatrix(
 		//	FPlane(0, 0, 1, 0),//x to y
 		//	FPlane(1, 0, 0, 0),//y to -z
@@ -478,9 +600,9 @@ void AWebcamActor::ComputeHeadDataTick()
 		//	FPlane(0, 0, 0, 1));
 
 		//FMatrix ViewRotationMatrix = FMatrix(
-		//	FPlane(rot_mat.at<double>(0), rot_mat.at<double>(1), rot_mat.at<double>(2), 0),
-		//	FPlane(rot_mat.at<double>(3), rot_mat.at<double>(4), rot_mat.at<double>(5), 0),
-		//	FPlane(rot_mat.at<double>(6), rot_mat.at<double>(7), rot_mat.at<double>(8), 0),
+		//	FPlane(R_matrix.at<double>(0), R_matrix.at<double>(1), R_matrix.at<double>(2), 0),
+		//	FPlane(R_matrix.at<double>(3), R_matrix.at<double>(4), R_matrix.at<double>(5), 0),
+		//	FPlane(R_matrix.at<double>(6), R_matrix.at<double>(7), R_matrix.at<double>(8), 0),
 		//	FPlane(0, 0, 0, 1));
 
 		//FMatrix ConvertedMatrix = ConvertRotationMatrix * ViewRotationMatrix * ConvertRotationMatrix;
@@ -491,22 +613,22 @@ void AWebcamActor::ComputeHeadDataTick()
 
 
 		// Export transform
-		//outFaces = TransformData(translation_vector.at<double>(0), translation_vector.at<double>(1), translation_vector.at<double>(2),
-		//	rot_mat.at<double>(2, 0), rot_mat.at<double>(2, 1), rot_mat.at<double>(2, 2),
-		//	rot_mat.at<double>(1, 0), rot_mat.at<double>(1, 1), rot_mat.at<double>(1, 2));
+		//outFaces = TransformData(tvec.at<double>(0), tvec.at<double>(1), tvec.at<double>(2),
+		//	R_matrix.at<double>(2, 0), R_matrix.at<double>(2, 1), R_matrix.at<double>(2, 2),
+		//	R_matrix.at<double>(1, 0), R_matrix.at<double>(1, 1), R_matrix.at<double>(1, 2));
 
 
 
 		//OPENCV =	right-handed	(+X: right,		+Y: down,	+Z: forward)
 		//UE4	 =	left-handed		(+X: forward,	+Y: right,	+Z: up)
 
-
-		cv::hconcat(rot_mat, translation_vector, pose_mat);
+		cv::hconcat(rotation_estimated, translation_estimated, pose_mat);
+		//cv::hconcat(pnp_detection.get_R_matrix(), tvec, pose_mat);
 		cv::decomposeProjectionMatrix(pose_mat, out_intrinsics, out_rotation, out_translation, cv::noArray(), cv::noArray(), cv::noArray(), euler_angle); //XYZ
 
-		//HeadLocation.X = -translation_vector.at<double>(0);
-		//HeadLocation.Y = -translation_vector.at<double>(1);
-		//HeadLocation.Z = -translation_vector.at<double>(2);
+		//HeadLocation.X = -tvec.at<double>(0);
+		//HeadLocation.Y = -tvec.at<double>(1);
+		//HeadLocation.Z = -tvec.at<double>(2);
 
 		HeadRotator.Pitch = -euler_angle.at<double>(0);
 		HeadRotator.Yaw = -euler_angle.at<double>(1);
@@ -514,8 +636,194 @@ void AWebcamActor::ComputeHeadDataTick()
 
 
 	}
+	// -- Step X: Draw pose and coordinate frame
+	float l = 5;
+	std::vector<cv::Point2f> pose_points2d;
+	if (largest_conf > 0)// || displayFilteredPose)
+	{
+		//drawObjectMesh(frame_vis, &mesh, &pnp_detection_est, yellow); // draw estimated pose
+
+//pnp_detection_est
+	}
+	else
+	{
+		//drawObjectMesh(frame_vis, &mesh, &pnp_detection, green);  // draw current pose
+
+
+	//	draw3DCoordinateAxes(frame, pose_points2d);           // draw axes
+	}
 
 }
+
+void AWebcamActor::fillMeasurements(cv::Mat &measurements,
+	const cv::Mat &translation_measured, const cv::Mat &rotation_measured)
+{
+	// Convert rotation matrix to euler angles
+	cv::Mat measured_eulers(3, 1, CV_64F);
+	measured_eulers = rot2euler(rotation_measured);
+	// Set measurement to predict
+	measurements.at<double>(0) = translation_measured.at<double>(0); // x
+	measurements.at<double>(1) = translation_measured.at<double>(1); // y
+	measurements.at<double>(2) = translation_measured.at<double>(2); // z
+	measurements.at<double>(3) = measured_eulers.at<double>(0);      // roll
+	measurements.at<double>(4) = measured_eulers.at<double>(1);      // pitch
+	measurements.at<double>(5) = measured_eulers.at<double>(2);      // yaw
+}
+
+// Converts a given Rotation Matrix to Euler angles
+// Convention used is Y-Z-X Tait-Bryan angles
+// Reference code implementation:
+// https://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToEuler/index.htm
+cv::Mat AWebcamActor::rot2euler(const cv::Mat & rotationMatrix)
+{
+	cv::Mat euler(3, 1, CV_64F);
+
+	double m00 = rotationMatrix.at<double>(0, 0);
+	double m02 = rotationMatrix.at<double>(0, 2);
+	double m10 = rotationMatrix.at<double>(1, 0);
+	double m11 = rotationMatrix.at<double>(1, 1);
+	double m12 = rotationMatrix.at<double>(1, 2);
+	double m20 = rotationMatrix.at<double>(2, 0);
+	double m22 = rotationMatrix.at<double>(2, 2);
+
+	double bank, attitude, heading;
+
+	// Assuming the angles are in radians.
+	if (m10 > 0.998) { // singularity at north pole
+		bank = 0;
+		attitude = CV_PI / 2;
+		heading = atan2(m02, m22);
+	}
+	else if (m10 < -0.998) { // singularity at south pole
+		bank = 0;
+		attitude = -CV_PI / 2;
+		heading = atan2(m02, m22);
+	}
+	else
+	{
+		bank = atan2(-m12, m11);
+		attitude = asin(m10);
+		heading = atan2(-m20, m00);
+	}
+
+	euler.at<double>(0) = bank;
+	euler.at<double>(1) = attitude;
+	euler.at<double>(2) = heading;
+
+	return euler;
+}
+
+
+// Converts a given Euler angles to Rotation Matrix
+// Convention used is Y-Z-X Tait-Bryan angles
+// Reference:
+// https://www.euclideanspace.com/maths/geometry/rotations/conversions/eulerToMatrix/index.htm
+cv::Mat AWebcamActor::euler2rot(const cv::Mat & euler)
+{
+	cv::Mat rotationMatrix(3, 3, CV_64F);
+
+	double bank = euler.at<double>(0);
+	double attitude = euler.at<double>(1);
+	double heading = euler.at<double>(2);
+
+	// Assuming the angles are in radians.
+	double ch = cos(heading);
+	double sh = sin(heading);
+	double ca = cos(attitude);
+	double sa = sin(attitude);
+	double cb = cos(bank);
+	double sb = sin(bank);
+
+	double m00, m01, m02, m10, m11, m12, m20, m21, m22;
+
+	m00 = ch * ca;
+	m01 = sh * sb - ch * sa*cb;
+	m02 = ch * sa*sb + sh * cb;
+	m10 = sa;
+	m11 = ca * cb;
+	m12 = -ca * sb;
+	m20 = -sh * ca;
+	m21 = sh * sa*cb + ch * sb;
+	m22 = -sh * sa*sb + ch * cb;
+
+	rotationMatrix.at<double>(0, 0) = m00;
+	rotationMatrix.at<double>(0, 1) = m01;
+	rotationMatrix.at<double>(0, 2) = m02;
+	rotationMatrix.at<double>(1, 0) = m10;
+	rotationMatrix.at<double>(1, 1) = m11;
+	rotationMatrix.at<double>(1, 2) = m12;
+	rotationMatrix.at<double>(2, 0) = m20;
+	rotationMatrix.at<double>(2, 1) = m21;
+	rotationMatrix.at<double>(2, 2) = m22;
+
+	return rotationMatrix;
+}
+
+void AWebcamActor::updateKalmanFilter(cv::KalmanFilter &KF, cv::Mat &measurement,
+	cv::Mat &translation_estimated, cv::Mat &rotation_estimated)
+{
+	// First predict, to update the internal statePre variable
+	cv::Mat prediction = KF.predict();
+	// The "correct" phase that is going to use the predicted value and our measurement
+	cv::Mat estimated = KF.correct(measurement);
+	// Estimated translation
+	translation_estimated.at<double>(0) = estimated.at<double>(0);
+	translation_estimated.at<double>(1) = estimated.at<double>(1);
+	translation_estimated.at<double>(2) = estimated.at<double>(2);
+	// Estimated euler angles
+	cv::Mat eulers_estimated(3, 1, CV_64F);
+	eulers_estimated.at<double>(0) = estimated.at<double>(9);
+	eulers_estimated.at<double>(1) = estimated.at<double>(10);
+	eulers_estimated.at<double>(2) = estimated.at<double>(11);
+	// Convert estimated quaternion to rotation matrix
+	rotation_estimated = euler2rot(eulers_estimated);
+}
+
+
+
+
+// Draw the 3D coordinate axes
+void AWebcamActor::draw3DCoordinateAxes(cv::Mat image, const std::vector<cv::Point2f> &list_points2d)
+{
+	// For circles
+	const int lineType = 8;
+	const int radius = 4;
+	cv::Scalar red(0, 0, 255);
+	cv::Scalar green(0, 255, 0);
+	cv::Scalar blue(255, 0, 0);
+	cv::Scalar black(0, 0, 0);
+
+	cv::Point2i origin = list_points2d[0];
+	cv::Point2i pointX = list_points2d[1];
+	cv::Point2i pointY = list_points2d[2];
+	cv::Point2i pointZ = list_points2d[3];
+
+	drawArrow(image, origin, pointX, red, 25, 2, lineType, 0);
+	drawArrow(image, origin, pointY, green, 25, 2, lineType, 0);
+	drawArrow(image, origin, pointZ, blue, 25, 2, lineType, 0);
+	cv::circle(image, origin, radius / 2, black, -1, lineType);
+}
+
+// Draw an arrow into the image
+void AWebcamActor::drawArrow(cv::Mat image, cv::Point2i p, cv::Point2i q, cv::Scalar color, int arrowMagnitude, int thickness, int line_type, int shift)
+{
+	//Draw the principle line
+	cv::line(image, p, q, color, thickness, line_type, shift);
+
+	//compute the angle alpha
+	double angle = atan2((double)p.y - q.y, (double)p.x - q.x);
+	//compute the coordinates of the first segment
+	p.x = (int)(q.x + arrowMagnitude * cos(angle + CV_PI / 4));
+	p.y = (int)(q.y + arrowMagnitude * sin(angle + CV_PI / 4));
+	//Draw the first segment
+	cv::line(image, p, q, color, thickness, line_type, shift);
+	//compute the coordinates of the second segment
+	p.x = (int)(q.x + arrowMagnitude * cos(angle - CV_PI / 4));
+	p.y = (int)(q.y + arrowMagnitude * sin(angle - CV_PI / 4));
+	//Draw the second segment
+	cv::line(image, p, q, color, thickness, line_type, shift);
+}
+
 
 void AWebcamActor::EndPlay(EEndPlayReason::Type reasonType)
 {
@@ -550,10 +858,9 @@ void AWebcamActor::EndPlay(EEndPlayReason::Type reasonType)
 		//FMemory::Free(&shape);
 		//FMemory::Free(&center);
 
-		camera_matrix.release();
-		dist_coeffs.release();
+
 		rotation_vector.release();
-		translation_vector.release();
+
 		nose_end_point3D.clear();
 		nose_end_point2D.clear();
 		rotation_mat.release();
