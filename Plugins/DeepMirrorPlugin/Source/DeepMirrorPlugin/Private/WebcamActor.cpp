@@ -433,6 +433,18 @@ void AWebcamActor::ComputeHeadDataTick()
 		// Get the measured rotation
 		cv::Mat rotation_measured = pnp_detection.get_R_matrix();
 
+		// 0 , 1 roll
+		// 2 yaw
+		// 5 pitch
+		// 3 translation?
+
+
+		/* Head rotation as quat, 
+		 0 and 1 seems to be roll and w/translation for quat, rolls inverted for the moment */
+		QuatHeadRotation = FQuat(rotation_measured.at<double>(0)*-1, rotation_measured.at<double>(2) * -1, rotation_measured.at<double>(5), rotation_measured.at<double>(1));
+		FQuat RotAdj = FQuat(0,0,-1,0);//probably find a way not to need this
+		QuatHeadRotation = RotAdj* QuatHeadRotation;
+
 		// fill the measurements vector
 		fillMeasurements(measurements, translation_measured, rotation_measured);
 

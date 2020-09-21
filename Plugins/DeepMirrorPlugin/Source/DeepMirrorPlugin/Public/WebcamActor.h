@@ -122,6 +122,9 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		FRotator HeadRotator;
 
+	UPROPERTY(BlueprintReadOnly)
+	FQuat QuatHeadRotation;
+
 	//relative location of detected face
 	UPROPERTY(BlueprintReadOnly)
 		FVector HeadLocation;
