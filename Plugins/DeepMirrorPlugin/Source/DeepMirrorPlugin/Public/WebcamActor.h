@@ -210,15 +210,16 @@ public:
 
 	void fillMeasurements(cv::Mat & measurements, const cv::Mat & translation_measured, const cv::Mat & rotation_measured);
 
-	cv::Mat rot2euler(const cv::Mat & rotationMatrix);
+	//RotationOrders = [ 0'XYZ', 1'YZX', 2'ZXY', 3'XZY', 4'YXZ', 5'ZYX' ];
+	UPROPERTY(EditAnywhere, Category = "FaceDetection")
+		int rot2eular_Order = 3;
+
+	std::vector<double>  rot2euler(const cv::Mat & rotationMatrix);
 
 	cv::Mat euler2rot(const cv::Mat & euler);
 
 	void updateKalmanFilter(cv::KalmanFilter & KF, cv::Mat & measurement, cv::Mat & translation_estimated, cv::Mat & rotation_estimated);
-
-	void set_P_matrix(const cv::Mat & R_matrix, const cv::Mat & t_matrix);
-
-	cv::Point2f backproject3DPoint(const cv::Point3f & point3d);
+	
 
 	void draw3DCoordinateAxes(cv::Mat image, const std::vector<cv::Point2f>& list_points2d);
 

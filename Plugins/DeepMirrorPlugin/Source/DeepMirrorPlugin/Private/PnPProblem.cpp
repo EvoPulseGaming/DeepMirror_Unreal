@@ -165,16 +165,16 @@ std::vector<double> PnPProblem::mat_toEular(cv::Mat m, int order)
 	//double m20 = rotationMatrix.at<double>(2, 0);
 	//double m22 = rotationMatrix.at<double>(2, 2);
 
-		const double m11 = m.at<double>(11), m12 = m.at<double>(12), m13 = m.at<double>(13);
-		const double m21 = m.at<double>(21), m22 = m.at<double>(22), m23 = m.at<double>(23);
-		const double m31 = m.at<double>(31), m32 = m.at<double>(32), m33 = m.at<double>(33);
+		const double m11 = m.at<double>(0,0), m12 = m.at<double>(0,1), m13 = m.at<double>(0,2);
+		const double m21 = m.at<double>(1,0), m22 = m.at<double>(1,1), m23 = m.at<double>(1,2);
+		const double m31 = m.at<double>(2,0), m32 = m.at<double>(2,1), m33 = m.at<double>(2,2);
 		double x=0;
 		double y=0;
 		double z=0;
 
 		//RotationOrders = [ 0'XYZ', 1'YZX', 2'ZXY', 3'XZY', 4'YXZ', 5'ZYX' ];
 		switch (order) {
-			std::clog << "Euler order is : " << order << std::endl;
+
 		case 0://'XYZ':
 
 			y = FMath::Asin(FMath::FMath::Clamp(m13, -1.0, 1.0));
@@ -289,6 +289,7 @@ std::vector<double> PnPProblem::mat_toEular(cv::Mat m, int order)
 
 			break;
 		}
-
-		return  { x,y,z };
+		double degrees = 180.0 / CV_PI;
+		//return  { x*degrees ,y*degrees ,z*degrees };
+		return{ x*degrees,y*degrees,z*degrees };
 }

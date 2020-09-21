@@ -325,140 +325,6 @@ void AWebcamActor::initKalmanFilter(cv::KalmanFilter &KF, int nStates, int nMeas
 	KF.measurementMatrix.at<double>(5, 11) = 1; // yaw
 }
 
-void AWebcamActor::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-}
-
-void AWebcamActor::CameraTimerTick()
-{
-	RefreshTime += 0.08f;
-	if (stream.isOpened() && RefreshTime >= 1.f / RefreshFPS)
-	{
-		stream.grab();
-		RefreshTime -= 1.f / RefreshFPS;
-		UpdateFrame();
-		ComputeHeadDataTick(); //refresh rate is controlled above
-		UpdateTexture();
-	}
-}
-
-void AWebcamActor::UpdateFrame()
-{
-	if (stream.isOpened())
-	{
-		stream.retrieve(frame);
-	}
-	else
-	{
-		isStreamOpen = false;
-	}
-}
-
-
-void AWebcamActor::UpdateTexture()
-{
-	if (stream.isOpened() && frame.data)
-	{
-		for (int y = 0; y < VideoSize.Y; y++)
-		{
-			for (int x = 0; x < VideoSize.X; x++)
-			{
-				int i = x + (y * VideoSize.X);
-				CameraData[i].B = frame.data[i * 3 + 0];
-				CameraData[i].G = frame.data[i * 3 + 1];
-				CameraData[i].R = frame.data[i * 3 + 2];
-			}
-		}
-
-		UpdateTextureRegions(VideoTexture, (int32)0, (uint32)1, VideoUpdateTextureRegion, (uint32)(4 * VideoSize.X), (uint32)4, (uint8*)CameraData.GetData(), false);
-
-
-		cv::resize(frame, FrameToLightSize, cv::Size(xSizeLight, ySizeLight), cv::INTER_LANCZOS4);
-
-		//https://www.researchgate.box_detector_face_net/publication/274640792_Illumination_Estimation_Based_Color_to_Grayscale_Conversion_Algorithms
-
-		//at gray(src.size(), CV_8UC1, Scalar(0));
-
-
-		gray.cols = FrameToLightSize.cols;
-		gray.rows = FrameToLightSize.rows;
-		//assuming float (CV_32F)
-		//make sure that the weights sum to 1 (or less) to avoid saturation.
-		//on a BGR image you should get the same as BGR2GRAY.If you use(1 / 3.0, 1 / 3.0, 1 / 3.0) instead
-		//you should get an average of the 3 channels.Adjust to your liking.
-		cv::transform(FrameToLightSize, gray, cv::Matx13f(0.114, 0.587, 0.299));
-
-		for (int y = 0; y < gray.rows; y++)
-		{
-			for (int x = 0; x < gray.cols; x++)
-			{
-				int i = x + (y * gray.cols);
-				EstimatedLights[i] = gray.data[i];
-			}
-		}
-
-		UpdateTextureRegions(LightEstVideoTexture, (int32)0, (uint32)1, LightEstVideoUpdateTextureRegion, (uint32)(1 * xSizeLight), (uint32)1, (uint8*)EstimatedLights.GetData(), false);
-
-	}
-}
-
-void AWebcamActor::UpdateTextureRegions(UTexture2D* Texture, int32 MipIndex, uint32 NumRegions, FUpdateTextureRegion2D* Regions, uint32 SrcPitch, uint32 SrcBpp, uint8* SrcData, bool bFreeData)
-{
-	if (Texture->Resource)
-	{
-		struct FUpdateTextureRegionsData
-		{
-			FTexture2DResource* Texture2DResource;
-			int32 MipIndex;
-			uint32 NumRegions;
-			FUpdateTextureRegion2D* Regions;
-			uint32 SrcPitch;
-			uint32 SrcBpp;
-			uint8* SrcData;
-		};
-
-		FUpdateTextureRegionsData* RegionData = new FUpdateTextureRegionsData;
-
-		RegionData->Texture2DResource = (FTexture2DResource*)Texture->Resource;
-		RegionData->MipIndex = MipIndex;
-		RegionData->NumRegions = NumRegions;
-		RegionData->Regions = Regions;
-		RegionData->SrcPitch = SrcPitch;
-		RegionData->SrcBpp = SrcBpp;
-		RegionData->SrcData = SrcData;
-
-		ENQUEUE_UNIQUE_RENDER_COMMAND_TWOPARAMETER(
-			UpdateTextureRegionsData,
-			FUpdateTextureRegionsData*, RegionData, RegionData,
-			bool, bFreeData, bFreeData,
-			{
-			for (uint32 RegionIndex = 0; RegionIndex < RegionData->NumRegions; ++RegionIndex)
-			{
-				int32 CurrentFirstMip = RegionData->Texture2DResource->GetCurrentFirstMip();
-				if (RegionData->MipIndex >= CurrentFirstMip)
-				{
-					RHIUpdateTexture2D(
-						RegionData->Texture2DResource->GetTexture2DRHI(),
-						RegionData->MipIndex - CurrentFirstMip,
-						RegionData->Regions[RegionIndex],
-						RegionData->SrcPitch,
-						RegionData->SrcData
-						+ RegionData->Regions[RegionIndex].SrcY * RegionData->SrcPitch
-						+ RegionData->Regions[RegionIndex].SrcX * RegionData->SrcBpp
-						);
-				}
-			}
-			if (bFreeData)
-			{
-				FMemory::Free(RegionData->Regions);
-				FMemory::Free(RegionData->SrcData);
-			}
-			delete RegionData;
-			});
-	}
-}
-
 void AWebcamActor::ComputeHeadDataTick()
 {
 	int scale_ratio = 1;
@@ -584,6 +450,10 @@ void AWebcamActor::ComputeHeadDataTick()
 		HeadLocation.Y = -tvec.at<double>(1);
 		HeadLocation.Z = -tvec.at<double>(2);
 
+		HeadRotator.Pitch = -rotation_estimated.at<double>(0);
+		HeadRotator.Yaw = -rotation_estimated.at<double>(1);
+		HeadRotator.Roll = -rotation_estimated.at<double>(2);
+
 		// Convert rotation to Matrix
 
 
@@ -621,36 +491,33 @@ void AWebcamActor::ComputeHeadDataTick()
 
 		//OPENCV =	right-handed	(+X: right,		+Y: down,	+Z: forward)
 		//UE4	 =	left-handed		(+X: forward,	+Y: right,	+Z: up)
-
-		cv::hconcat(rotation_estimated, translation_estimated, pose_mat);
+		//cheatcodes found here:
+		//https://github.com/mrdoob/three.js/blob/dev/src/math/Euler.js
+		//cv::hconcat(rotation_estimated, translation_estimated, pose_mat);
 		//cv::hconcat(pnp_detection.get_R_matrix(), tvec, pose_mat);
-		cv::decomposeProjectionMatrix(pose_mat, out_intrinsics, out_rotation, out_translation, cv::noArray(), cv::noArray(), cv::noArray(), euler_angle); //XYZ
+		//cv::decomposeProjectionMatrix(pose_mat, out_intrinsics, out_rotation, out_translation, cv::noArray(), cv::noArray(), cv::noArray(), euler_angle); //XYZ
 
 		//HeadLocation.X = -tvec.at<double>(0);
 		//HeadLocation.Y = -tvec.at<double>(1);
 		//HeadLocation.Z = -tvec.at<double>(2);
 
-		HeadRotator.Pitch = -euler_angle.at<double>(0);
-		HeadRotator.Yaw = -euler_angle.at<double>(1);
-		HeadRotator.Roll = -euler_angle.at<double>(2);
+		//HeadRotator.Pitch = -euler_angle.at<double>(0);
+		//HeadRotator.Yaw = -euler_angle.at<double>(1);
+		//HeadRotator.Roll = -euler_angle.at<double>(2);
 
 
 	}
 	// -- Step X: Draw pose and coordinate frame
-	float l = 5;
 	std::vector<cv::Point2f> pose_points2d;
 	if (largest_conf > 0)// || displayFilteredPose)
 	{
-		//drawObjectMesh(frame_vis, &mesh, &pnp_detection_est, yellow); // draw estimated pose
-
-//pnp_detection_est
+		cv::drawFrameAxes(frame, pnp_detection.get_A_matrix(), pnp_detection.get_distCoeffs(),
+			pnp_detection.get_rvec(), pnp_detection.get_tvec(), 150, 2);
 	}
 	else
-	{
-		//drawObjectMesh(frame_vis, &mesh, &pnp_detection, green);  // draw current pose
-
-
-	//	draw3DCoordinateAxes(frame, pose_points2d);           // draw axes
+	{ //Can't enable until we move away from euler in the kalman filter.
+		//cv::drawFrameAxes(frame, pnp_detection_est.get_A_matrix(), pnp_detection_est.get_distCoeffs(),
+		//	pnp_detection_est.get_rvec(), pnp_detection_est.get_tvec(), 150, 2);
 	}
 
 }
@@ -659,58 +526,24 @@ void AWebcamActor::fillMeasurements(cv::Mat &measurements,
 	const cv::Mat &translation_measured, const cv::Mat &rotation_measured)
 {
 	// Convert rotation matrix to euler angles
-	cv::Mat measured_eulers(3, 1, CV_64F);
-	measured_eulers = rot2euler(rotation_measured);
+	
+	std::vector<double> measured_eulers = rot2euler(rotation_measured);
 	// Set measurement to predict
 	measurements.at<double>(0) = translation_measured.at<double>(0); // x
 	measurements.at<double>(1) = translation_measured.at<double>(1); // y
 	measurements.at<double>(2) = translation_measured.at<double>(2); // z
-	measurements.at<double>(3) = measured_eulers.at<double>(0);      // roll
-	measurements.at<double>(4) = measured_eulers.at<double>(1);      // pitch
-	measurements.at<double>(5) = measured_eulers.at<double>(2);      // yaw
+	measurements.at<double>(3) = measured_eulers[0];      // roll
+	measurements.at<double>(4) = measured_eulers[1];      // pitch
+	measurements.at<double>(5) = measured_eulers[2];      // yaw
 }
 
 // Converts a given Rotation Matrix to Euler angles
 // Convention used is Y-Z-X Tait-Bryan angles
 // Reference code implementation:
 // https://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToEuler/index.htm
-cv::Mat AWebcamActor::rot2euler(const cv::Mat & rotationMatrix)
+std::vector<double> AWebcamActor::rot2euler(const cv::Mat & rotationMatrix)
 {
-	cv::Mat euler(3, 1, CV_64F);
-
-	double m00 = rotationMatrix.at<double>(0, 0);
-	double m02 = rotationMatrix.at<double>(0, 2);
-	double m10 = rotationMatrix.at<double>(1, 0);
-	double m11 = rotationMatrix.at<double>(1, 1);
-	double m12 = rotationMatrix.at<double>(1, 2);
-	double m20 = rotationMatrix.at<double>(2, 0);
-	double m22 = rotationMatrix.at<double>(2, 2);
-
-	double bank, attitude, heading;
-
-	// Assuming the angles are in radians.
-	if (m10 > 0.998) { // singularity at north pole
-		bank = 0;
-		attitude = CV_PI / 2;
-		heading = atan2(m02, m22);
-	}
-	else if (m10 < -0.998) { // singularity at south pole
-		bank = 0;
-		attitude = -CV_PI / 2;
-		heading = atan2(m02, m22);
-	}
-	else
-	{
-		bank = atan2(-m12, m11);
-		attitude = asin(m10);
-		heading = atan2(-m20, m00);
-	}
-
-	euler.at<double>(0) = bank;
-	euler.at<double>(1) = attitude;
-	euler.at<double>(2) = heading;
-
-	return euler;
+	return pnp_detection.mat_toEular(rotationMatrix, rot2eular_Order);
 }
 
 
@@ -776,7 +609,7 @@ void AWebcamActor::updateKalmanFilter(cv::KalmanFilter &KF, cv::Mat &measurement
 	eulers_estimated.at<double>(1) = estimated.at<double>(10);
 	eulers_estimated.at<double>(2) = estimated.at<double>(11);
 	// Convert estimated quaternion to rotation matrix
-	rotation_estimated = euler2rot(eulers_estimated);
+	rotation_estimated = eulers_estimated;// euler2rot(eulers_estimated);
 }
 
 
@@ -822,6 +655,144 @@ void AWebcamActor::drawArrow(cv::Mat image, cv::Point2i p, cv::Point2i q, cv::Sc
 	p.y = (int)(q.y + arrowMagnitude * sin(angle - CV_PI / 4));
 	//Draw the second segment
 	cv::line(image, p, q, color, thickness, line_type, shift);
+}
+
+
+void AWebcamActor::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+}
+
+void AWebcamActor::CameraTimerTick()
+{
+	RefreshTime += 0.08f;
+	if (stream.isOpened() && RefreshTime >= 1.f / RefreshFPS)
+	{
+		stream.grab();
+		RefreshTime -= 1.f / RefreshFPS;
+		UpdateFrame();
+		ComputeHeadDataTick(); //refresh rate is controlled above
+		UpdateTexture();
+	}
+}
+
+void AWebcamActor::UpdateFrame()
+{
+	if (stream.isOpened())
+	{
+		stream.retrieve(frame);
+	}
+	else
+	{
+		isStreamOpen = false;
+	}
+}
+
+
+void AWebcamActor::UpdateTexture()
+{
+	if (VideoTexture != NULL && VideoTexture->Resource) {
+		if (stream.isOpened() && frame.data)
+		{
+			for (int y = 0; y < VideoSize.Y; y++)
+			{
+				for (int x = 0; x < VideoSize.X; x++)
+				{
+					int i = x + (y * VideoSize.X);
+					CameraData[i].B = frame.data[i * 3 + 0];
+					CameraData[i].G = frame.data[i * 3 + 1];
+					CameraData[i].R = frame.data[i * 3 + 2];
+				}
+			}
+
+			UpdateTextureRegions(VideoTexture, (int32)0, (uint32)1, VideoUpdateTextureRegion, (uint32)(4 * VideoSize.X), (uint32)4, (uint8*)CameraData.GetData(), false);
+
+
+			cv::resize(frame, FrameToLightSize, cv::Size(xSizeLight, ySizeLight), cv::INTER_LANCZOS4);
+
+			//https://www.researchgate.box_detector_face_net/publication/274640792_Illumination_Estimation_Based_Color_to_Grayscale_Conversion_Algorithms
+
+			//at gray(src.size(), CV_8UC1, Scalar(0));
+
+
+			gray.cols = FrameToLightSize.cols;
+			gray.rows = FrameToLightSize.rows;
+			//assuming float (CV_32F)
+			//make sure that the weights sum to 1 (or less) to avoid saturation.
+			//on a BGR image you should get the same as BGR2GRAY.If you use(1 / 3.0, 1 / 3.0, 1 / 3.0) instead
+			//you should get an average of the 3 channels.Adjust to your liking.
+			cv::transform(FrameToLightSize, gray, cv::Matx13f(0.114, 0.587, 0.299));
+
+			for (int y = 0; y < gray.rows; y++)
+			{
+				for (int x = 0; x < gray.cols; x++)
+				{
+					int i = x + (y * gray.cols);
+					EstimatedLights[i] = gray.data[i];
+				}
+			}
+
+			UpdateTextureRegions(LightEstVideoTexture, (int32)0, (uint32)1, LightEstVideoUpdateTextureRegion, (uint32)(1 * xSizeLight), (uint32)1, (uint8*)EstimatedLights.GetData(), false);
+
+		}
+	}
+
+}
+
+void AWebcamActor::UpdateTextureRegions(UTexture2D* Texture, int32 MipIndex, uint32 NumRegions, FUpdateTextureRegion2D* Regions, uint32 SrcPitch, uint32 SrcBpp, uint8* SrcData, bool bFreeData)
+{
+	if (Texture != NULL && Texture->Resource)
+	{
+		struct FUpdateTextureRegionsData
+		{
+			FTexture2DResource* Texture2DResource;
+			int32 MipIndex;
+			uint32 NumRegions;
+			FUpdateTextureRegion2D* Regions;
+			uint32 SrcPitch;
+			uint32 SrcBpp;
+			uint8* SrcData;
+		};
+
+		FUpdateTextureRegionsData* RegionData = new FUpdateTextureRegionsData;
+
+		RegionData->Texture2DResource = (FTexture2DResource*)Texture->Resource;
+		RegionData->MipIndex = MipIndex;
+		RegionData->NumRegions = NumRegions;
+		RegionData->Regions = Regions;
+		RegionData->SrcPitch = SrcPitch;
+		RegionData->SrcBpp = SrcBpp;
+		RegionData->SrcData = SrcData;
+
+		ENQUEUE_UNIQUE_RENDER_COMMAND_TWOPARAMETER(
+			UpdateTextureRegionsData,
+			FUpdateTextureRegionsData*, RegionData, RegionData,
+			bool, bFreeData, bFreeData,
+			{
+			for (uint32 RegionIndex = 0; RegionIndex < RegionData->NumRegions; ++RegionIndex)
+			{
+				int32 CurrentFirstMip = RegionData->Texture2DResource->GetCurrentFirstMip();
+				if (RegionData->MipIndex >= CurrentFirstMip)
+				{
+					RHIUpdateTexture2D(
+						RegionData->Texture2DResource->GetTexture2DRHI(),
+						RegionData->MipIndex - CurrentFirstMip,
+						RegionData->Regions[RegionIndex],
+						RegionData->SrcPitch,
+						RegionData->SrcData
+						+ RegionData->Regions[RegionIndex].SrcY * RegionData->SrcPitch
+						+ RegionData->Regions[RegionIndex].SrcX * RegionData->SrcBpp
+						);
+				}
+			}
+			if (bFreeData)
+			{
+				FMemory::Free(RegionData->Regions);
+				FMemory::Free(RegionData->SrcData);
+			}
+			delete RegionData;
+			});
+	}
 }
 
 
