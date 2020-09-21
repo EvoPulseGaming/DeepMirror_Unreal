@@ -182,12 +182,18 @@ void AWebcamActor::BeginPlay()
 		//model_3D_compare_pts.push_back(cv::Point3f(0.000000, -3.116408, 6.097667));    //#45 mouth central bottom corner
 		//model_3D_compare_pts.push_back(cv::Point3f(0.000000, -7.415691, 4.070434));    //#6 chin corner
 
-		model_3D_compare_pts.push_back(cv::Point3f(0.0f, 0.0f, 60.f));               // Nose tip
-		model_3D_compare_pts.push_back(cv::Point3f(0.0f, -330.0f, -65.0f));          // Chin
-		model_3D_compare_pts.push_back(cv::Point3f(-225.0f, 170.0f, -135.0f));       // Left eye left corner
-		model_3D_compare_pts.push_back(cv::Point3f(225.0f, 170.0f, -135.0f));        // Right eye right corner
-		model_3D_compare_pts.push_back(cv::Point3f(-150.0f, -150.0f, -125.0f));      // Left Mouth corner
-		model_3D_compare_pts.push_back(cv::Point3f(150.0f, -150.0f, -125.0f));       // Right mouth corner
+		model_3D_compare_pts.push_back(cv::Point3f(0.0, 1.409845, 6.165652));    //#49 nose right corner
+		//model_3D_compare_pts.push_back(cv::Point3f(0.0f, 0.0f, 60.f));               // Nose tip
+		model_3D_compare_pts.push_back(cv::Point3f(0.000000, -7.415691, 4.070434));    //#6 chin corner
+		//model_3D_compare_pts.push_back(cv::Point3f(0.0f, -330.0f, -65.0f));          // Chin
+		model_3D_compare_pts.push_back(cv::Point3f(5.311432, 5.485328, 3.987654));     //#13 left eye left corner
+		//model_3D_compare_pts.push_back(cv::Point3f(-225.0f, 170.0f, -135.0f));       // Left eye left corner
+		model_3D_compare_pts.push_back(cv::Point3f(-5.311432, 5.485328, 3.987654));    //#21 right eye right corner
+		//model_3D_compare_pts.push_back(cv::Point3f(225.0f, 170.0f, -135.0f));        // Right eye right corner
+		model_3D_compare_pts.push_back(cv::Point3f(2.774015, -2.080775, 5.048531));    //#43 mouth left corner
+		//model_3D_compare_pts.push_back(cv::Point3f(-150.0f, -150.0f, -125.0f));      // Left Mouth corner
+		model_3D_compare_pts.push_back(cv::Point3f(-2.774015, -2.080775, 5.048531));   //#39 mouth right corner
+		//model_3D_compare_pts.push_back(cv::Point3f(150.0f, -150.0f, -125.0f));       // Right mouth corner
 
 
 		//result
