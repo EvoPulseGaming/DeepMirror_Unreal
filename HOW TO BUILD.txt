@@ -1,4 +1,5 @@
 Requires 4.24+ UE4 engine (works with binary builds, or source builds)
+Requires CMAKE (not the built in version with visual studio) MUST ADD TO PATH when installing (You will be asked during install)
 Run BUILD_DLIB and BUILD_OPENCV (you can run these as the same time for mutli core)
 Right click DeepMirror.uproject and select "Generate Visual Studio Project Files"
 Open the generated DeepMirror.sln
