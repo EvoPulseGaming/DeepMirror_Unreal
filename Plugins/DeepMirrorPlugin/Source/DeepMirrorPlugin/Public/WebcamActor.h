@@ -141,6 +141,8 @@ public:
 
 	cv::Point2f prev_nose;
 
+	FQuat Matrix2Quat(cv::Mat a);
+
 
 
 	//file reader for dnn network
@@ -217,9 +219,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "FaceDetection")
 		int rot2eular_Order = 3;
 
-	std::vector<double>  rot2euler(const cv::Mat & rotationMatrix);
+	std::vector<double>  matrix2euler(const cv::Mat & rotationMatrix);
 
-	cv::Mat euler2rot(const cv::Mat & euler);
+	cv::Mat euler2matrix(const cv::Mat & euler);
 
 	void updateKalmanFilter(cv::KalmanFilter & KF, cv::Mat & measurement, cv::Mat & translation_estimated, cv::Mat & rotation_estimated);
 	

@@ -165,9 +165,9 @@ std::vector<double> PnPProblem::mat_toEular(cv::Mat m, int order)
 	//double m20 = rotationMatrix.at<double>(2, 0);
 	//double m22 = rotationMatrix.at<double>(2, 2);
 
-		const double m11 = m.at<double>(0,0), m12 = m.at<double>(0,1), m13 = m.at<double>(0,2);
-		const double m21 = m.at<double>(1,0), m22 = m.at<double>(1,1), m23 = m.at<double>(1,2);
-		const double m31 = m.at<double>(2,0), m32 = m.at<double>(2,1), m33 = m.at<double>(2,2);
+		const double m00 = m.at<double>(0,0), m01 = m.at<double>(0,1), m02 = m.at<double>(0,2);
+		const double m10 = m.at<double>(1,0), m11 = m.at<double>(1,1), m12 = m.at<double>(1,2);
+		const double m20 = m.at<double>(2,0), m21 = m.at<double>(2,1), m22 = m.at<double>(2,2);
 		double x=0;
 		double y=0;
 		double z=0;
@@ -177,17 +177,17 @@ std::vector<double> PnPProblem::mat_toEular(cv::Mat m, int order)
 
 		case 0://'XYZ':
 
-			y = FMath::Asin(FMath::FMath::Clamp(m13, -1.0, 1.0));
+			y = FMath::Asin(FMath::FMath::Clamp(m02, -1.0, 1.0));
 
-			if (FMath::Abs(m13) < 0.9999999) {
+			if (FMath::Abs(m02) < 0.9999999) {
 
-				x = FMath::Atan2(-m23, m33);
-				z = FMath::Atan2(-m12, m11);
+				x = FMath::Atan2(-m12, m22);
+				z = FMath::Atan2(-m01, m00);
 
 			}
 			else {
 
-				x = FMath::Atan2(m32, m22);
+				x = FMath::Atan2(m21, m11);
 				z = 0;
 
 			}
@@ -196,17 +196,17 @@ std::vector<double> PnPProblem::mat_toEular(cv::Mat m, int order)
 
 		case 1://'YXZ':
 
-			x = FMath::Asin(-FMath::Clamp(m23, -1.0, 1.0));
+			x = FMath::Asin(-FMath::Clamp(m12, -1.0, 1.0));
 
-			if (FMath::Abs(m23) < 0.9999999) {
+			if (FMath::Abs(m12) < 0.9999999) {
 
-				y = FMath::Atan2(m13, m33);
-				z = FMath::Atan2(m21, m22);
+				y = FMath::Atan2(m02, m22);
+				z = FMath::Atan2(m10, m11);
 
 			}
 			else {
 
-				y = FMath::Atan2(-m31, m11);
+				y = FMath::Atan2(-m20, m00);
 				z = 0;
 
 			}
@@ -215,18 +215,18 @@ std::vector<double> PnPProblem::mat_toEular(cv::Mat m, int order)
 
 		case 2://'ZXY':
 
-			x = FMath::Asin(FMath::Clamp(m32, -1.0, 1.0));
+			x = FMath::Asin(FMath::Clamp(m21, -1.0, 1.0));
 
-			if (FMath::Abs(m32) < 0.9999999) {
+			if (FMath::Abs(m21) < 0.9999999) {
 
-				y = FMath::Atan2(-m31, m33);
-				z = FMath::Atan2(-m12, m22);
+				y = FMath::Atan2(-m20, m22);
+				z = FMath::Atan2(-m01, m11);
 
 			}
 			else {
 
 				y = 0;
-				z = FMath::Atan2(m21, m11);
+				z = FMath::Atan2(m10, m00);
 
 			}
 
@@ -234,18 +234,18 @@ std::vector<double> PnPProblem::mat_toEular(cv::Mat m, int order)
 
 		case 3://'ZYX':
 
-			y = FMath::Asin(-FMath::Clamp(m31, -1.0, 1.0));
+			y = FMath::Asin(-FMath::Clamp(m20, -1.0, 1.0));
 
-			if (FMath::Abs(m31) < 0.9999999) {
+			if (FMath::Abs(m20) < 0.9999999) {
 
-				x = FMath::Atan2(m32, m33);
-				z = FMath::Atan2(m21, m11);
+				x = FMath::Atan2(m21, m22);
+				z = FMath::Atan2(m10, m00);
 
 			}
 			else {
 
 				x = 0;
-				z = FMath::Atan2(-m12, m22);
+				z = FMath::Atan2(-m01, m11);
 
 			}
 
@@ -253,18 +253,18 @@ std::vector<double> PnPProblem::mat_toEular(cv::Mat m, int order)
 
 		case 4://'YZX':
 
-			z = FMath::Asin(FMath::Clamp(m21, -1.0, 1.0));
+			z = FMath::Asin(FMath::Clamp(m10, -1.0, 1.0));
 
-			if (FMath::Abs(m21) < 0.9999999) {
+			if (FMath::Abs(m10) < 0.9999999) {
 
-				x = FMath::Atan2(-m23, m22);
-				y = FMath::Atan2(-m31, m11);
+				x = FMath::Atan2(-m12, m11);
+				y = FMath::Atan2(-m20, m00);
 
 			}
 			else {
 
 				x = 0;
-				y = FMath::Atan2(m13, m33);
+				y = FMath::Atan2(m02, m22);
 
 			}
 
@@ -272,17 +272,17 @@ std::vector<double> PnPProblem::mat_toEular(cv::Mat m, int order)
 
 		case 5://'XZY':
 
-			z = FMath::Asin(-FMath::Clamp(m12, -1.0, 1.0));
+			z = FMath::Asin(-FMath::Clamp(m01, -1.0, 1.0));
 
-			if (FMath::Abs(m12) < 0.9999999) {
+			if (FMath::Abs(m01) < 0.9999999) {
 
-				x = FMath::Atan2(m32, m22);
-				y = FMath::Atan2(m13, m11);
+				x = FMath::Atan2(m21, m11);
+				y = FMath::Atan2(m02, m00);
 
 			}
 			else {
 
-				x = FMath::Atan2(-m23, m33);
+				x = FMath::Atan2(-m12, m22);
 				y = 0;
 
 			}

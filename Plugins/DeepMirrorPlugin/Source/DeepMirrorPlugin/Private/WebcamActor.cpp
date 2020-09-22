@@ -108,9 +108,6 @@ AWebcamActor::~AWebcamActor()
 	}
 }
 
-
-
-
 void AWebcamActor::BeginPlay()
 {
 	Super::BeginPlay();
@@ -269,8 +266,6 @@ void AWebcamActor::BeginPlay()
 
 }
 
-
-
 void AWebcamActor::initKalmanFilter(cv::KalmanFilter &KF, int nStates, int nMeasurements, int nInputs, double dt)
 {
 	KF.init(nStates, nMeasurements, nInputs, CV_64F);                 // init Kalman Filter
@@ -329,6 +324,19 @@ void AWebcamActor::initKalmanFilter(cv::KalmanFilter &KF, int nStates, int nMeas
 	KF.measurementMatrix.at<double>(3, 9) = 1;  // roll
 	KF.measurementMatrix.at<double>(4, 10) = 1; // pitch
 	KF.measurementMatrix.at<double>(5, 11) = 1; // yaw
+}
+
+void AWebcamActor::CameraTimerTick()
+{
+	RefreshTime += 0.08f;
+	if (stream.isOpened() && RefreshTime >= 1.f / RefreshFPS)
+	{
+		stream.grab();
+		RefreshTime -= 1.f / RefreshFPS;
+		UpdateFrame();
+		ComputeHeadDataTick(); //refresh rate is controlled above
+		UpdateTexture();
+	}
 }
 
 void AWebcamActor::ComputeHeadDataTick()
@@ -447,9 +455,11 @@ void AWebcamActor::ComputeHeadDataTick()
 
 		/* Head rotation as quat, 
 		 0 and 1 seems to be roll and w/translation for quat, rolls inverted for the moment */
-		QuatHeadRotation = FQuat(rotation_measured.at<double>(0)*-1, rotation_measured.at<double>(2) * -1, rotation_measured.at<double>(5), rotation_measured.at<double>(1));
-		FQuat RotAdj = FQuat(0,0,-1,0);//probably find a way not to need this
-		QuatHeadRotation = RotAdj* QuatHeadRotation;
+		//QuatHeadRotation = FQuat(rotation_measured.at<double>(0)*-1, rotation_measured.at<double>(2) * -1, rotation_measured.at<double>(5), rotation_measured.at<double>(1));
+		//FQuat RotAdj = FQuat(0,0,-1,0);//probably find a way not to need this
+		//QuatHeadRotation = RotAdj* QuatHeadRotation;
+
+		QuatHeadRotation = Matrix2Quat(rotation_measured);
 
 		// fill the measurements vector
 		fillMeasurements(measurements, translation_measured, rotation_measured);
@@ -472,57 +482,12 @@ void AWebcamActor::ComputeHeadDataTick()
 		HeadRotator.Yaw = -rotation_estimated.at<double>(1);
 		HeadRotator.Roll = -rotation_estimated.at<double>(2);
 
-		// Convert rotation to Matrix
-
-
-		//cv::Mat identity = (cv::Mat_<double>(3, 3) <<
-		//	1, 0, 0,
-		//	0, -1, 0,
-		//	0, 0, -1);
-
-		//R_matrix = R_matrix * identity * R_matrix;
-		//FMatrix ConvertRotationMatrix = FMatrix(
-		//	FPlane(0, 0, 1, 0),//x to y
-		//	FPlane(1, 0, 0, 0),//y to -z
-		//	FPlane(0, -1, 0, 0),
-		//	FPlane(0, 0, 0, 1));
-
-		//FMatrix ViewRotationMatrix = FMatrix(
-		//	FPlane(R_matrix.at<double>(0), R_matrix.at<double>(1), R_matrix.at<double>(2), 0),
-		//	FPlane(R_matrix.at<double>(3), R_matrix.at<double>(4), R_matrix.at<double>(5), 0),
-		//	FPlane(R_matrix.at<double>(6), R_matrix.at<double>(7), R_matrix.at<double>(8), 0),
-		//	FPlane(0, 0, 0, 1));
-
-		//FMatrix ConvertedMatrix = ConvertRotationMatrix * ViewRotationMatrix * ConvertRotationMatrix;
-
-
-		//HeadRotator = ConvertedMatrix.Rotator();
-
-
-
-		// Export transform
-		//outFaces = TransformData(tvec.at<double>(0), tvec.at<double>(1), tvec.at<double>(2),
-		//	R_matrix.at<double>(2, 0), R_matrix.at<double>(2, 1), R_matrix.at<double>(2, 2),
-		//	R_matrix.at<double>(1, 0), R_matrix.at<double>(1, 1), R_matrix.at<double>(1, 2));
-
 
 
 		//OPENCV =	right-handed	(+X: right,		+Y: down,	+Z: forward)
 		//UE4	 =	left-handed		(+X: forward,	+Y: right,	+Z: up)
 		//cheatcodes found here:
 		//https://github.com/mrdoob/three.js/blob/dev/src/math/Euler.js
-		//cv::hconcat(rotation_estimated, translation_estimated, pose_mat);
-		//cv::hconcat(pnp_detection.get_R_matrix(), tvec, pose_mat);
-		//cv::decomposeProjectionMatrix(pose_mat, out_intrinsics, out_rotation, out_translation, cv::noArray(), cv::noArray(), cv::noArray(), euler_angle); //XYZ
-
-		//HeadLocation.X = -tvec.at<double>(0);
-		//HeadLocation.Y = -tvec.at<double>(1);
-		//HeadLocation.Z = -tvec.at<double>(2);
-
-		//HeadRotator.Pitch = -euler_angle.at<double>(0);
-		//HeadRotator.Yaw = -euler_angle.at<double>(1);
-		//HeadRotator.Roll = -euler_angle.at<double>(2);
-
 
 	}
 	// -- Step X: Draw pose and coordinate frame
@@ -540,12 +505,60 @@ void AWebcamActor::ComputeHeadDataTick()
 
 }
 
+FQuat AWebcamActor::Matrix2Quat(cv::Mat a)  {
+	//x rotation_measured.at<double>(0)*-1
+	//y rotation_measured.at<double>(2) * -1
+	//z rotation_measured.at<double>(5)
+	//w rotation_measured.at<double>(1))
+	//x = 0,0
+	//y = 0,2
+	//z = 1,2
+	//w = 0,1
+
+
+ //FQuat RotAdj = FQuat(0,0,-1,0);//probably find a way not to need this
+ //QuatHeadRotation = RotAdj* QuatHeadRotation;
+	FQuat q;
+	float trace = a.at<double>(0,0) + a.at<double>(1,1) + a.at<double>(2,2); // I removed + 1.0f; see discussion with Ethan
+	if (trace > 0) {// I changed M_EPSILON to 0
+		float s = 0.5f / sqrtf(trace + 1.0f);
+		q.W = 0.25f / s;
+		q.X = (a.at<double>(2,1) - a.at<double>(1,2)) * s;
+		q.Y = (a.at<double>(0,2) - a.at<double>(2,0)) * s;
+		q.Z = (a.at<double>(1,0) - a.at<double>(0,1)) * s;
+	}
+	else {
+		if (a.at<double>(0,0) > a.at<double>(1,1) && a.at<double>(0,0) > a.at<double>(2,2)) {
+			float s = 2.0f * sqrtf(1.0f + a.at<double>(0,0) - a.at<double>(1,1) - a.at<double>(2,2));
+			q.W = (a.at<double>(2,1) - a.at<double>(1,2)) / s;
+			q.X = 0.25f * s;
+			q.Y = (a.at<double>(0,1) + a.at<double>(1,0)) / s;
+			q.Z = (a.at<double>(0,2) + a.at<double>(2,0)) / s;
+		}
+		else if (a.at<double>(1,1) > a.at<double>(2,2)) {
+			float s = 2.0f * sqrtf(1.0f + a.at<double>(1,1) - a.at<double>(0,0) - a.at<double>(2,2));
+			q.W = (a.at<double>(0,2) - a.at<double>(2,0)) / s;
+			q.X = (a.at<double>(0,1) + a.at<double>(1,0)) / s;
+			q.Y = 0.25f * s;
+			q.Z = (a.at<double>(1,2) + a.at<double>(2,1)) / s;
+		}
+		else {
+			float s = 2.0f * sqrtf(1.0f + a.at<double>(2,2) - a.at<double>(0,0) - a.at<double>(1,1));
+			q.W = (a.at<double>(1,0) - a.at<double>(0,1)) / s;
+			q.X = (a.at<double>(0,2) + a.at<double>(2,0)) / s;
+			q.Y = (a.at<double>(1,2) + a.at<double>(2,1)) / s;
+			q.Z = 0.25f * s;
+		}
+	}
+	return q;
+}
+
 void AWebcamActor::fillMeasurements(cv::Mat &measurements,
 	const cv::Mat &translation_measured, const cv::Mat &rotation_measured)
 {
 	// Convert rotation matrix to euler angles
 	
-	std::vector<double> measured_eulers = rot2euler(rotation_measured);
+	std::vector<double> measured_eulers = matrix2euler(rotation_measured);
 	// Set measurement to predict
 	measurements.at<double>(0) = translation_measured.at<double>(0); // x
 	measurements.at<double>(1) = translation_measured.at<double>(1); // y
@@ -555,21 +568,40 @@ void AWebcamActor::fillMeasurements(cv::Mat &measurements,
 	measurements.at<double>(5) = measured_eulers[2];      // yaw
 }
 
+void AWebcamActor::updateKalmanFilter(cv::KalmanFilter &KF, cv::Mat &measurement,
+	cv::Mat &translation_estimated, cv::Mat &rotation_estimated)
+{
+	// First predict, to update the internal statePre variable
+	cv::Mat prediction = KF.predict();
+	// The "correct" phase that is going to use the predicted value and our measurement
+	cv::Mat estimated = KF.correct(measurement);
+	// Estimated translation
+	translation_estimated.at<double>(0) = estimated.at<double>(0);
+	translation_estimated.at<double>(1) = estimated.at<double>(1);
+	translation_estimated.at<double>(2) = estimated.at<double>(2);
+	// Estimated euler angles
+	cv::Mat eulers_estimated(3, 1, CV_64F);
+	eulers_estimated.at<double>(0) = estimated.at<double>(9);
+	eulers_estimated.at<double>(1) = estimated.at<double>(10);
+	eulers_estimated.at<double>(2) = estimated.at<double>(11);
+	// Convert estimated quaternion to rotation matrix
+	rotation_estimated = eulers_estimated;// euler2matrix(eulers_estimated);
+}
+
 // Converts a given Rotation Matrix to Euler angles
 // Convention used is Y-Z-X Tait-Bryan angles
 // Reference code implementation:
 // https://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToEuler/index.htm
-std::vector<double> AWebcamActor::rot2euler(const cv::Mat & rotationMatrix)
+std::vector<double> AWebcamActor::matrix2euler(const cv::Mat & rotationMatrix)
 {
 	return pnp_detection.mat_toEular(rotationMatrix, rot2eular_Order);
 }
-
 
 // Converts a given Euler angles to Rotation Matrix
 // Convention used is Y-Z-X Tait-Bryan angles
 // Reference:
 // https://www.euclideanspace.com/maths/geometry/rotations/conversions/eulerToMatrix/index.htm
-cv::Mat AWebcamActor::euler2rot(const cv::Mat & euler)
+cv::Mat AWebcamActor::euler2matrix(const cv::Mat & euler)
 {
 	cv::Mat rotationMatrix(3, 3, CV_64F);
 
@@ -609,29 +641,6 @@ cv::Mat AWebcamActor::euler2rot(const cv::Mat & euler)
 
 	return rotationMatrix;
 }
-
-void AWebcamActor::updateKalmanFilter(cv::KalmanFilter &KF, cv::Mat &measurement,
-	cv::Mat &translation_estimated, cv::Mat &rotation_estimated)
-{
-	// First predict, to update the internal statePre variable
-	cv::Mat prediction = KF.predict();
-	// The "correct" phase that is going to use the predicted value and our measurement
-	cv::Mat estimated = KF.correct(measurement);
-	// Estimated translation
-	translation_estimated.at<double>(0) = estimated.at<double>(0);
-	translation_estimated.at<double>(1) = estimated.at<double>(1);
-	translation_estimated.at<double>(2) = estimated.at<double>(2);
-	// Estimated euler angles
-	cv::Mat eulers_estimated(3, 1, CV_64F);
-	eulers_estimated.at<double>(0) = estimated.at<double>(9);
-	eulers_estimated.at<double>(1) = estimated.at<double>(10);
-	eulers_estimated.at<double>(2) = estimated.at<double>(11);
-	// Convert estimated quaternion to rotation matrix
-	rotation_estimated = eulers_estimated;// euler2rot(eulers_estimated);
-}
-
-
-
 
 // Draw the 3D coordinate axes
 void AWebcamActor::draw3DCoordinateAxes(cv::Mat image, const std::vector<cv::Point2f> &list_points2d)
@@ -675,24 +684,12 @@ void AWebcamActor::drawArrow(cv::Mat image, cv::Point2i p, cv::Point2i q, cv::Sc
 	cv::line(image, p, q, color, thickness, line_type, shift);
 }
 
-
 void AWebcamActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 }
 
-void AWebcamActor::CameraTimerTick()
-{
-	RefreshTime += 0.08f;
-	if (stream.isOpened() && RefreshTime >= 1.f / RefreshFPS)
-	{
-		stream.grab();
-		RefreshTime -= 1.f / RefreshFPS;
-		UpdateFrame();
-		ComputeHeadDataTick(); //refresh rate is controlled above
-		UpdateTexture();
-	}
-}
+
 
 void AWebcamActor::UpdateFrame()
 {
@@ -705,7 +702,6 @@ void AWebcamActor::UpdateFrame()
 		isStreamOpen = false;
 	}
 }
-
 
 void AWebcamActor::UpdateTexture()
 {
@@ -813,7 +809,6 @@ void AWebcamActor::UpdateTextureRegions(UTexture2D* Texture, int32 MipIndex, uin
 	}
 }
 
-
 void AWebcamActor::EndPlay(EEndPlayReason::Type reasonType)
 {
 	if (isStreamOpen)
@@ -862,5 +857,3 @@ void AWebcamActor::EndPlay(EEndPlayReason::Type reasonType)
 
 	bMemoryReleased = true;
 }
-
-
