@@ -474,9 +474,9 @@ void AWebcamActor::ComputeHeadDataTick()
 		// -- Step 6: Set estimated projection matrix
 		pnp_detection_est.set_P_matrix(rotation_estimated, translation_estimated);
 
-		HeadLocation.X = -tvec.at<double>(0);
-		HeadLocation.Y = -tvec.at<double>(1);
-		HeadLocation.Z = -tvec.at<double>(2);
+		HeadLocation.X = translation_estimated.at<double>(0);
+		HeadLocation.Y = translation_estimated.at<double>(1);
+		HeadLocation.Z = translation_estimated.at<double>(2);
 
 		HeadRotator.Pitch = -rotation_estimated.at<double>(0);
 		HeadRotator.Yaw = -rotation_estimated.at<double>(1);
