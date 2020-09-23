@@ -46,8 +46,9 @@ AWebcamActor::AWebcamActor()
 
 	rotation_vector = cv::Mat();
 
-	nose_end_point3D.empty();
-	nose_end_point2D.empty();
+	//Does not work in vs2019
+	//nose_end_point3D.empty();
+	//nose_end_point2D.empty();
 	rotation_mat = cv::Mat();
 	pose_mat = cv::Mat();
 	euler_angle = cv::Mat();
