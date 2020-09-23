@@ -115,9 +115,19 @@ void AWebcamActor::BeginPlay()
 
 	bMemoryReleased = false;
 
+	try
+	{
+		CameraIDOpened = stream.open(CameraID);
+	}
+	catch (...) 
+	{
+		CameraIDOpened = false;
+	}
 
-	stream.open(CameraID);
-	if (stream.grab() && stream.isOpened())
+
+	//Short circuting should prevent the next test condition from being
+	//evaluated, so this should never crash.
+	if (CameraIDOpened && stream.isOpened() && stream.grab())
 	{
 
 		isStreamOpen = true;

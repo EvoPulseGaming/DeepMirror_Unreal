@@ -48,6 +48,10 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Webcam)
 		int32 CameraID;
 
+	// If the camera on CameraID was succesfully opened
+	UPROPERTY(BlueprintReadOnly, Category = Webcam)
+		bool CameraIDOpened = false;
+
 	// The rate at which the color data array and video texture is updated (in frames per second)
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Webcam")
 		float RefreshFPS;
